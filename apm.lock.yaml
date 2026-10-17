@@ -1,0 +1,590 @@
+lockfile_version: '1'
+apm_version: 0.33.0
+dependencies:
+- repo_url: e0ipso/strikethroo
+  name: strikethroo
+  host: github.com
+  resolved_commit: 32205cafc5d58741b2751b78f56d88c1df174219
+  resolved_ref: v4.2.0
+  version: 32205ca
+  package_type: marketplace_plugin
+  deployed_files:
+  - .claude/skills/st-code-review
+  - .claude/skills/st-code-review/SKILL.md
+  - .claude/skills/st-code-review/references/review-example.xml.md
+  - .claude/skills/st-code-review/scripts/code-review.cjs
+  - .claude/skills/st-code-review/scripts/find-strikethroo-root.cjs
+  - .claude/skills/st-code-review/scripts/validate-plan-blueprint.cjs
+  - .claude/skills/st-create-plan
+  - .claude/skills/st-create-plan/SKILL.md
+  - .claude/skills/st-create-plan/scripts/check-for-updates.cjs
+  - .claude/skills/st-create-plan/scripts/find-strikethroo-root.cjs
+  - .claude/skills/st-create-plan/scripts/get-next-plan-id.cjs
+  - .claude/skills/st-execute-blueprint
+  - .claude/skills/st-execute-blueprint/SKILL.md
+  - .claude/skills/st-execute-blueprint/scripts/capture-base-commit.cjs
+  - .claude/skills/st-execute-blueprint/scripts/check-for-updates.cjs
+  - .claude/skills/st-execute-blueprint/scripts/check-phase-readiness.cjs
+  - .claude/skills/st-execute-blueprint/scripts/create-feature-branch.cjs
+  - .claude/skills/st-execute-blueprint/scripts/dispatch-task-execution.cjs
+  - .claude/skills/st-execute-blueprint/scripts/find-strikethroo-root.cjs
+  - .claude/skills/st-execute-blueprint/scripts/validate-plan-blueprint.cjs
+  - .claude/skills/st-execute-task
+  - .claude/skills/st-execute-task/SKILL.md
+  - .claude/skills/st-execute-task/scripts/check-for-updates.cjs
+  - .claude/skills/st-execute-task/scripts/check-task-dependencies.cjs
+  - .claude/skills/st-execute-task/scripts/dispatch-task-execution.cjs
+  - .claude/skills/st-execute-task/scripts/find-strikethroo-root.cjs
+  - .claude/skills/st-execute-task/scripts/validate-plan-blueprint.cjs
+  - .claude/skills/st-full-workflow
+  - .claude/skills/st-full-workflow/SKILL.md
+  - .claude/skills/st-full-workflow/references/complexity-rubric.md
+  - .claude/skills/st-full-workflow/scripts/capture-base-commit.cjs
+  - .claude/skills/st-full-workflow/scripts/check-for-updates.cjs
+  - .claude/skills/st-full-workflow/scripts/check-phase-readiness.cjs
+  - .claude/skills/st-full-workflow/scripts/create-feature-branch.cjs
+  - .claude/skills/st-full-workflow/scripts/dispatch-task-execution.cjs
+  - .claude/skills/st-full-workflow/scripts/find-strikethroo-root.cjs
+  - .claude/skills/st-full-workflow/scripts/get-next-plan-id.cjs
+  - .claude/skills/st-full-workflow/scripts/get-next-task-id.cjs
+  - .claude/skills/st-full-workflow/scripts/route-task-execution.cjs
+  - .claude/skills/st-full-workflow/scripts/validate-plan-blueprint.cjs
+  - .claude/skills/st-generate-tasks
+  - .claude/skills/st-generate-tasks/SKILL.md
+  - .claude/skills/st-generate-tasks/references/complexity-rubric.md
+  - .claude/skills/st-generate-tasks/scripts/check-for-updates.cjs
+  - .claude/skills/st-generate-tasks/scripts/find-strikethroo-root.cjs
+  - .claude/skills/st-generate-tasks/scripts/get-next-task-id.cjs
+  - .claude/skills/st-generate-tasks/scripts/route-task-execution.cjs
+  - .claude/skills/st-generate-tasks/scripts/validate-plan-blueprint.cjs
+  - .claude/skills/st-refine-plan
+  - .claude/skills/st-refine-plan/SKILL.md
+  - .claude/skills/st-refine-plan/scripts/check-for-updates.cjs
+  - .claude/skills/st-refine-plan/scripts/find-strikethroo-root.cjs
+  - .claude/skills/st-refine-plan/scripts/validate-plan-blueprint.cjs
+  deployed_file_hashes:
+    .claude/skills/st-code-review/SKILL.md: sha256:ae221c50b374ab98e1f636d88f1a63c8650d08e1603fa60c4111cf5aafb2b4d7
+    .claude/skills/st-code-review/references/review-example.xml.md: sha256:422ef8a117abbdc765c9c29bd3745371f94265b4faef2bbef246f68f7cc15409
+    .claude/skills/st-code-review/scripts/code-review.cjs: sha256:46d51200c19b2007f18e3ad6282a3fa8f22144d19c4dbb45520b54c57a8e1e79
+    .claude/skills/st-code-review/scripts/find-strikethroo-root.cjs: sha256:45f150338e78d527e3c4c426e34ea767700c012f93d97b376b1e962653859c37
+    .claude/skills/st-code-review/scripts/validate-plan-blueprint.cjs: sha256:a05ea1a5cb49d54a7d4f6419d8f6f9e6f98fa0ae518092ddb6aef9f1fa034a0a
+    .claude/skills/st-create-plan/SKILL.md: sha256:1645d8f7e32892ca8b3a143257bcd5c9fb40b7a517efaf4987732274f6e99d62
+    .claude/skills/st-create-plan/scripts/check-for-updates.cjs: sha256:3d88d2b9273df38f4b5e3ed23cddf7f0d04b9037b4b6d849e04bb302ab14ba01
+    .claude/skills/st-create-plan/scripts/find-strikethroo-root.cjs: sha256:45f150338e78d527e3c4c426e34ea767700c012f93d97b376b1e962653859c37
+    .claude/skills/st-create-plan/scripts/get-next-plan-id.cjs: sha256:38e21fe75b7a78f9b569b7dd3052cc0ea4047b3d6fd3a78451121d8aedeab0ab
+    .claude/skills/st-execute-blueprint/SKILL.md: sha256:45f3ca966bb5b8b6eb17c3121eadf84cd4dbb03afda1749a33602d6f36768ed0
+    .claude/skills/st-execute-blueprint/scripts/capture-base-commit.cjs: sha256:f2a655d5ae742e7503a9c4fa86cdb2dcaff1c398ac9168f0c3ad0548cbcd3ed8
+    .claude/skills/st-execute-blueprint/scripts/check-for-updates.cjs: sha256:3d88d2b9273df38f4b5e3ed23cddf7f0d04b9037b4b6d849e04bb302ab14ba01
+    .claude/skills/st-execute-blueprint/scripts/check-phase-readiness.cjs: sha256:d02e70cbf2e0fada089e639129547c05a8c4edede2ab7a7b44f7da0309229e23
+    .claude/skills/st-execute-blueprint/scripts/create-feature-branch.cjs: sha256:c08c2698c1d358385c0802fc27d4d7d672f84be31e074858f8262d8cd91fe09c
+    .claude/skills/st-execute-blueprint/scripts/dispatch-task-execution.cjs: sha256:675b4b59298fb8f82bf4de7917a5d0f53be521bfa0ba5626d1601527814e234f
+    .claude/skills/st-execute-blueprint/scripts/find-strikethroo-root.cjs: sha256:45f150338e78d527e3c4c426e34ea767700c012f93d97b376b1e962653859c37
+    .claude/skills/st-execute-blueprint/scripts/validate-plan-blueprint.cjs: sha256:a05ea1a5cb49d54a7d4f6419d8f6f9e6f98fa0ae518092ddb6aef9f1fa034a0a
+    .claude/skills/st-execute-task/SKILL.md: sha256:61276f5655ada8e68d6f6df94587a0f99fd8b5b372b193c837ff214b7aaba979
+    .claude/skills/st-execute-task/scripts/check-for-updates.cjs: sha256:3d88d2b9273df38f4b5e3ed23cddf7f0d04b9037b4b6d849e04bb302ab14ba01
+    .claude/skills/st-execute-task/scripts/check-task-dependencies.cjs: sha256:66088d4e9e053c1590894848b1e53c9a19b7eaa5752c29e7663eb3dd6e624d59
+    .claude/skills/st-execute-task/scripts/dispatch-task-execution.cjs: sha256:675b4b59298fb8f82bf4de7917a5d0f53be521bfa0ba5626d1601527814e234f
+    .claude/skills/st-execute-task/scripts/find-strikethroo-root.cjs: sha256:45f150338e78d527e3c4c426e34ea767700c012f93d97b376b1e962653859c37
+    .claude/skills/st-execute-task/scripts/validate-plan-blueprint.cjs: sha256:a05ea1a5cb49d54a7d4f6419d8f6f9e6f98fa0ae518092ddb6aef9f1fa034a0a
+    .claude/skills/st-full-workflow/SKILL.md: sha256:bbc388d9af417accd44b1a9515e01790e6bf085adfbee06e5990582f53029eab
+    .claude/skills/st-full-workflow/references/complexity-rubric.md: sha256:71be0f0cb91907ae60777021b735159630a5fccf458fe2c05cf592091fc14cba
+    .claude/skills/st-full-workflow/scripts/capture-base-commit.cjs: sha256:f2a655d5ae742e7503a9c4fa86cdb2dcaff1c398ac9168f0c3ad0548cbcd3ed8
+    .claude/skills/st-full-workflow/scripts/check-for-updates.cjs: sha256:3d88d2b9273df38f4b5e3ed23cddf7f0d04b9037b4b6d849e04bb302ab14ba01
+    .claude/skills/st-full-workflow/scripts/check-phase-readiness.cjs: sha256:d02e70cbf2e0fada089e639129547c05a8c4edede2ab7a7b44f7da0309229e23
+    .claude/skills/st-full-workflow/scripts/create-feature-branch.cjs: sha256:c08c2698c1d358385c0802fc27d4d7d672f84be31e074858f8262d8cd91fe09c
+    .claude/skills/st-full-workflow/scripts/dispatch-task-execution.cjs: sha256:675b4b59298fb8f82bf4de7917a5d0f53be521bfa0ba5626d1601527814e234f
+    .claude/skills/st-full-workflow/scripts/find-strikethroo-root.cjs: sha256:45f150338e78d527e3c4c426e34ea767700c012f93d97b376b1e962653859c37
+    .claude/skills/st-full-workflow/scripts/get-next-plan-id.cjs: sha256:38e21fe75b7a78f9b569b7dd3052cc0ea4047b3d6fd3a78451121d8aedeab0ab
+    .claude/skills/st-full-workflow/scripts/get-next-task-id.cjs: sha256:4c2a2687fb279905b82a2fb78b39aadb7cb2789ce545a430cc09c27a0187d0ab
+    .claude/skills/st-full-workflow/scripts/route-task-execution.cjs: sha256:14c969d241b5cb4e02d20b15bc1a6046bafc7380f19aed013f3f574edb6f8c5e
+    .claude/skills/st-full-workflow/scripts/validate-plan-blueprint.cjs: sha256:a05ea1a5cb49d54a7d4f6419d8f6f9e6f98fa0ae518092ddb6aef9f1fa034a0a
+    .claude/skills/st-generate-tasks/SKILL.md: sha256:2daa478d5f5d205bde2ef8dd12ab16c75e00c688158cbb1088db19ba399a0042
+    .claude/skills/st-generate-tasks/references/complexity-rubric.md: sha256:71be0f0cb91907ae60777021b735159630a5fccf458fe2c05cf592091fc14cba
+    .claude/skills/st-generate-tasks/scripts/check-for-updates.cjs: sha256:3d88d2b9273df38f4b5e3ed23cddf7f0d04b9037b4b6d849e04bb302ab14ba01
+    .claude/skills/st-generate-tasks/scripts/find-strikethroo-root.cjs: sha256:45f150338e78d527e3c4c426e34ea767700c012f93d97b376b1e962653859c37
+    .claude/skills/st-generate-tasks/scripts/get-next-task-id.cjs: sha256:4c2a2687fb279905b82a2fb78b39aadb7cb2789ce545a430cc09c27a0187d0ab
+    .claude/skills/st-generate-tasks/scripts/route-task-execution.cjs: sha256:14c969d241b5cb4e02d20b15bc1a6046bafc7380f19aed013f3f574edb6f8c5e
+    .claude/skills/st-generate-tasks/scripts/validate-plan-blueprint.cjs: sha256:a05ea1a5cb49d54a7d4f6419d8f6f9e6f98fa0ae518092ddb6aef9f1fa034a0a
+    .claude/skills/st-refine-plan/SKILL.md: sha256:24e3de708b593b7ca0d31fc99285ba854ddae1dc7998b9c1f2fd3bca69357ed7
+    .claude/skills/st-refine-plan/scripts/check-for-updates.cjs: sha256:3d88d2b9273df38f4b5e3ed23cddf7f0d04b9037b4b6d849e04bb302ab14ba01
+    .claude/skills/st-refine-plan/scripts/find-strikethroo-root.cjs: sha256:45f150338e78d527e3c4c426e34ea767700c012f93d97b376b1e962653859c37
+    .claude/skills/st-refine-plan/scripts/validate-plan-blueprint.cjs: sha256:a05ea1a5cb49d54a7d4f6419d8f6f9e6f98fa0ae518092ddb6aef9f1fa034a0a
+  content_hash: sha256:924538657e1f65beb89d4db04c7954167cf326641580fbd31f193c8510b2f24b
+deployments:
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-code-review
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-code-review/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:ae221c50b374ab98e1f636d88f1a63c8650d08e1603fa60c4111cf5aafb2b4d7
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-code-review/references/review-example.xml.md
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:422ef8a117abbdc765c9c29bd3745371f94265b4faef2bbef246f68f7cc15409
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-code-review/scripts/code-review.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:46d51200c19b2007f18e3ad6282a3fa8f22144d19c4dbb45520b54c57a8e1e79
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-code-review/scripts/find-strikethroo-root.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:45f150338e78d527e3c4c426e34ea767700c012f93d97b376b1e962653859c37
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-code-review/scripts/validate-plan-blueprint.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:a05ea1a5cb49d54a7d4f6419d8f6f9e6f98fa0ae518092ddb6aef9f1fa034a0a
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-create-plan
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-create-plan/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:1645d8f7e32892ca8b3a143257bcd5c9fb40b7a517efaf4987732274f6e99d62
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-create-plan/scripts/check-for-updates.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:3d88d2b9273df38f4b5e3ed23cddf7f0d04b9037b4b6d849e04bb302ab14ba01
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-create-plan/scripts/find-strikethroo-root.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:45f150338e78d527e3c4c426e34ea767700c012f93d97b376b1e962653859c37
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-create-plan/scripts/get-next-plan-id.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:38e21fe75b7a78f9b569b7dd3052cc0ea4047b3d6fd3a78451121d8aedeab0ab
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-execute-blueprint
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-execute-blueprint/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:45f3ca966bb5b8b6eb17c3121eadf84cd4dbb03afda1749a33602d6f36768ed0
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-execute-blueprint/scripts/capture-base-commit.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:f2a655d5ae742e7503a9c4fa86cdb2dcaff1c398ac9168f0c3ad0548cbcd3ed8
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-execute-blueprint/scripts/check-for-updates.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:3d88d2b9273df38f4b5e3ed23cddf7f0d04b9037b4b6d849e04bb302ab14ba01
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-execute-blueprint/scripts/check-phase-readiness.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:d02e70cbf2e0fada089e639129547c05a8c4edede2ab7a7b44f7da0309229e23
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-execute-blueprint/scripts/create-feature-branch.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:c08c2698c1d358385c0802fc27d4d7d672f84be31e074858f8262d8cd91fe09c
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-execute-blueprint/scripts/dispatch-task-execution.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:675b4b59298fb8f82bf4de7917a5d0f53be521bfa0ba5626d1601527814e234f
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-execute-blueprint/scripts/find-strikethroo-root.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:45f150338e78d527e3c4c426e34ea767700c012f93d97b376b1e962653859c37
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-execute-blueprint/scripts/validate-plan-blueprint.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:a05ea1a5cb49d54a7d4f6419d8f6f9e6f98fa0ae518092ddb6aef9f1fa034a0a
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-execute-task
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-execute-task/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:61276f5655ada8e68d6f6df94587a0f99fd8b5b372b193c837ff214b7aaba979
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-execute-task/scripts/check-for-updates.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:3d88d2b9273df38f4b5e3ed23cddf7f0d04b9037b4b6d849e04bb302ab14ba01
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-execute-task/scripts/check-task-dependencies.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:66088d4e9e053c1590894848b1e53c9a19b7eaa5752c29e7663eb3dd6e624d59
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-execute-task/scripts/dispatch-task-execution.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:675b4b59298fb8f82bf4de7917a5d0f53be521bfa0ba5626d1601527814e234f
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-execute-task/scripts/find-strikethroo-root.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:45f150338e78d527e3c4c426e34ea767700c012f93d97b376b1e962653859c37
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-execute-task/scripts/validate-plan-blueprint.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:a05ea1a5cb49d54a7d4f6419d8f6f9e6f98fa0ae518092ddb6aef9f1fa034a0a
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-full-workflow
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-full-workflow/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:bbc388d9af417accd44b1a9515e01790e6bf085adfbee06e5990582f53029eab
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-full-workflow/references/complexity-rubric.md
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:71be0f0cb91907ae60777021b735159630a5fccf458fe2c05cf592091fc14cba
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-full-workflow/scripts/capture-base-commit.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:f2a655d5ae742e7503a9c4fa86cdb2dcaff1c398ac9168f0c3ad0548cbcd3ed8
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-full-workflow/scripts/check-for-updates.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:3d88d2b9273df38f4b5e3ed23cddf7f0d04b9037b4b6d849e04bb302ab14ba01
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-full-workflow/scripts/check-phase-readiness.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:d02e70cbf2e0fada089e639129547c05a8c4edede2ab7a7b44f7da0309229e23
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-full-workflow/scripts/create-feature-branch.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:c08c2698c1d358385c0802fc27d4d7d672f84be31e074858f8262d8cd91fe09c
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-full-workflow/scripts/dispatch-task-execution.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:675b4b59298fb8f82bf4de7917a5d0f53be521bfa0ba5626d1601527814e234f
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-full-workflow/scripts/find-strikethroo-root.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:45f150338e78d527e3c4c426e34ea767700c012f93d97b376b1e962653859c37
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-full-workflow/scripts/get-next-plan-id.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:38e21fe75b7a78f9b569b7dd3052cc0ea4047b3d6fd3a78451121d8aedeab0ab
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-full-workflow/scripts/get-next-task-id.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:4c2a2687fb279905b82a2fb78b39aadb7cb2789ce545a430cc09c27a0187d0ab
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-full-workflow/scripts/route-task-execution.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:14c969d241b5cb4e02d20b15bc1a6046bafc7380f19aed013f3f574edb6f8c5e
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-full-workflow/scripts/validate-plan-blueprint.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:a05ea1a5cb49d54a7d4f6419d8f6f9e6f98fa0ae518092ddb6aef9f1fa034a0a
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-generate-tasks
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-generate-tasks/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:2daa478d5f5d205bde2ef8dd12ab16c75e00c688158cbb1088db19ba399a0042
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-generate-tasks/references/complexity-rubric.md
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:71be0f0cb91907ae60777021b735159630a5fccf458fe2c05cf592091fc14cba
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-generate-tasks/scripts/check-for-updates.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:3d88d2b9273df38f4b5e3ed23cddf7f0d04b9037b4b6d849e04bb302ab14ba01
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-generate-tasks/scripts/find-strikethroo-root.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:45f150338e78d527e3c4c426e34ea767700c012f93d97b376b1e962653859c37
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-generate-tasks/scripts/get-next-task-id.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:4c2a2687fb279905b82a2fb78b39aadb7cb2789ce545a430cc09c27a0187d0ab
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-generate-tasks/scripts/route-task-execution.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:14c969d241b5cb4e02d20b15bc1a6046bafc7380f19aed013f3f574edb6f8c5e
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-generate-tasks/scripts/validate-plan-blueprint.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:a05ea1a5cb49d54a7d4f6419d8f6f9e6f98fa0ae518092ddb6aef9f1fa034a0a
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-refine-plan
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-refine-plan/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:24e3de708b593b7ca0d31fc99285ba854ddae1dc7998b9c1f2fd3bca69357ed7
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-refine-plan/scripts/check-for-updates.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:3d88d2b9273df38f4b5e3ed23cddf7f0d04b9037b4b6d849e04bb302ab14ba01
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-refine-plan/scripts/find-strikethroo-root.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:45f150338e78d527e3c4c426e34ea767700c012f93d97b376b1e962653859c37
+- kind: project-relative
+  target: claude
+  value: .claude/skills/st-refine-plan/scripts/validate-plan-blueprint.cjs
+  runtime: null
+  scope: project
+  owners:
+  - e0ipso/strikethroo
+  active_owner: e0ipso/strikethroo
+  content_hash: sha256:a05ea1a5cb49d54a7d4f6419d8f6f9e6f98fa0ae518092ddb6aef9f1fa034a0a

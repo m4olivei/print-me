@@ -1,0 +1,15 @@
+name: print-me
+version: 1.0.0
+description: APM project for print-me
+author: Matthew Oliveira
+# Which agent platforms to deploy to (uncomment to pin):
+# targets:
+#   - copilot
+#   - claude
+
+dependencies:
+  apm:
+    - e0ipso/strikethroo#v4.2.0
+  mcp: []
+includes: auto
+scripts: {}
