@@ -2,7 +2,7 @@
 id: 4
 group: "shared"
 dependencies: [2, 3]
-status: "pending"
+status: "completed"
 created: 2026-10-17
 skills:
   - typeorm
@@ -20,12 +20,12 @@ Add the SQLite/TypeORM layer to `packages/shared`: the data source (WAL, busy ti
 typeorm, sqlite.
 
 ## Acceptance Criteria
-- [ ] `createDataSource(dbPath)` / `initDatabase(dbPath)` returns an initialised TypeORM `DataSource` on `better-sqlite3` with `synchronize: true`, WAL journal mode and a busy timeout; it creates the parent directory if missing.
-- [ ] `PrintJob` entity (`print_job` table): generated integer `id`, `url`, `driveFileId`, `state` (`queued | processing | printed | failed`), `attempts` (default 0), `nextAttemptAt`, `lastError` (nullable), `mimeType` (nullable), `cupsJobId` (nullable), `createdAt`, `updatedAt`. The partial index is **not** declared through TypeORM decorators.
-- [ ] After init, raw SQL runs `CREATE UNIQUE INDEX IF NOT EXISTS <name> ON print_job(driveFileId) WHERE state IN ('queued','processing')`, then `sqlite_master` is queried; if the index is missing, init throws (refuse to start).
-- [ ] `intakeJob(dataSource, { url, driveFileId, maxJobsPerHour, now? })` runs in one transaction and returns a discriminated union: `{ kind: 'existing', id }` if an active job for the file exists; `{ kind: 'rate-limited', retryAfterSeconds }` if jobs created in the last hour ≥ cap (`retryAfterSeconds` = seconds until the oldest in-window job turns one hour old, rounded up, min 1); else `{ kind: 'created', id }` for a new `queued` job with `nextAttemptAt = now`. On `SQLITE_CONSTRAINT_UNIQUE` during insert it re-reads the active job and returns `existing`; any other error propagates. Dedupe is checked before the cap.
-- [ ] vitest integration tests against a temp SQLite file cover: index present in `sqlite_master` after init; a second active row for the same `driveFileId` inserted directly fails with `SQLITE_CONSTRAINT_UNIQUE`; dedupe while `queued`/`processing`; a new job after `printed`/`failed`; the hourly cap with correct `retryAfterSeconds`; a deduped request does not count toward the cap; intake recovers from a constraint error by returning the existing id.
-- [ ] Verification: `pnpm --filter @print-me/shared test` exits 0; `pnpm run build && pnpm run check && pnpm run format:check` exit 0.
+- [x] `createDataSource(dbPath)` / `initDatabase(dbPath)` returns an initialised TypeORM `DataSource` on `better-sqlite3` with `synchronize: true`, WAL journal mode and a busy timeout; it creates the parent directory if missing.
+- [x] `PrintJob` entity (`print_job` table): generated integer `id`, `url`, `driveFileId`, `state` (`queued | processing | printed | failed`), `attempts` (default 0), `nextAttemptAt`, `lastError` (nullable), `mimeType` (nullable), `cupsJobId` (nullable), `createdAt`, `updatedAt`. The partial index is **not** declared through TypeORM decorators.
+- [x] After init, raw SQL runs `CREATE UNIQUE INDEX IF NOT EXISTS <name> ON print_job(driveFileId) WHERE state IN ('queued','processing')`, then `sqlite_master` is queried; if the index is missing, init throws (refuse to start).
+- [x] `intakeJob(dataSource, { url, driveFileId, maxJobsPerHour, now? })` runs in one transaction and returns a discriminated union: `{ kind: 'existing', id }` if an active job for the file exists; `{ kind: 'rate-limited', retryAfterSeconds }` if jobs created in the last hour ≥ cap (`retryAfterSeconds` = seconds until the oldest in-window job turns one hour old, rounded up, min 1); else `{ kind: 'created', id }` for a new `queued` job with `nextAttemptAt = now`. On `SQLITE_CONSTRAINT_UNIQUE` during insert it re-reads the active job and returns `existing`; any other error propagates. Dedupe is checked before the cap.
+- [x] vitest integration tests against a temp SQLite file cover: index present in `sqlite_master` after init; a second active row for the same `driveFileId` inserted directly fails with `SQLITE_CONSTRAINT_UNIQUE`; dedupe while `queued`/`processing`; a new job after `printed`/`failed`; the hourly cap with correct `retryAfterSeconds`; a deduped request does not count toward the cap; intake recovers from a constraint error by returning the existing id.
+- [x] Verification: `pnpm --filter @print-me/shared test` exits 0; `pnpm run build && pnpm run check && pnpm run format:check` exit 0.
 
 Use your internal Todo tool to track these and keep on track.
 

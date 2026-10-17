@@ -402,9 +402,9 @@ graph TD
 - ✔️ Task 003: Shared Drive URL parsing, retry policy, Drive client, handler registry (depends on: 002)
 - ✔️ Task 007: Cloudflare Tunnel and Access in OpenTofu, tunnel systemd unit (depends on: 002)
 
-### Phase 3: Shared Database
+### ✅ Phase 3: Shared Database
 **Parallel Tasks:**
-- Task 004: Shared data source, PrintJob entity, partial index, job intake (depends on: 002, 003)
+- ✔️ Task 004: Shared data source, PrintJob entity, partial index, job intake (depends on: 002, 003)
 
 ### Phase 4: Applications
 **Parallel Tasks:**
