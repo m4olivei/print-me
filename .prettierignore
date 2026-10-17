@@ -1,0 +1,15 @@
+# Package manager
+pnpm-lock.yaml
+node_modules/
+
+# Build output
+dist/
+
+# OpenTofu provider plugins (HCL is formatted with `tofu fmt`, not Prettier)
+infra/**/.terraform/
+
+# Project planning / tooling metadata
+.ai/
+.claude/
+apm_modules/
+apm.lock.yaml

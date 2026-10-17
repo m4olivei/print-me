@@ -1,0 +1,19 @@
+{
+	"name": "print-me",
+	"private": true,
+	"version": "0.0.1",
+	"description": "Webhook that prints Google Drive PDFs on a LAN printer",
+	"packageManager": "pnpm@11.20.0",
+	"scripts": {
+		"build": "pnpm -r run build",
+		"check": "pnpm --filter @print-me/shared run build && pnpm -r run check",
+		"format": "prettier --write .",
+		"format:check": "prettier --check ."
+	},
+	"devDependencies": {
+		"@types/node": "^24.19.1",
+		"prettier": "^3.9.6",
+		"tsx": "^4.23.9",
+		"typescript": "^5.9.3"
+	}
+}

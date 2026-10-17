@@ -1,0 +1,15 @@
+{
+	"name": "@print-me/worker",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"dev": "tsx watch src/index.ts",
+		"start": "tsx src/index.ts",
+		"build": "tsc -p tsconfig.json",
+		"check": "tsc --noEmit -p tsconfig.json"
+	},
+	"dependencies": {
+		"@print-me/shared": "workspace:*"
+	}
+}

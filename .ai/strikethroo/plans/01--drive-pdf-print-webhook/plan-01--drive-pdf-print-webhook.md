@@ -367,3 +367,56 @@ All routes sit behind Cloudflare Access and need the `CF-Access-Client-Id` and `
 
 - 2026-10-17: Incorporated the webhook agent's review: `driveFileId` dedupe while a job is active (`200` with the existing id, partial unique index), an app-level hourly cap (`MAX_JOBS_PER_HOUR`, `429`), `GET /healthz`, a Drive size cap (`MAX_FILE_BYTES`, permanent failure), and calling `lp` directly instead of `unix-print`. Kept the 1/2/4/8-minute backoff and the 1-year service token, with its expiry as an OpenTofu output. Added the webhook API data contract.
 - 2026-10-17: Second round of agent feedback: the partial unique index is created with raw SQL at startup (TypeORM `synchronize` is unreliable for partial indexes), startup checks that it exists, and job intake turns a unique-constraint error into the deduplicated `200`. The 429 now carries `Retry-After` and `retryAfterSeconds`. Tests and validation updated.
+
+## Task Dependencies
+
+```mermaid
+graph TD
+    001[Task 001: CUPS + SpliX proof print] --> 006[Task 006: Worker app]
+    001 --> 008[Task 008: Documentation]
+    002[Task 002: Monorepo scaffold] --> 003[Task 003: Shared Drive/retry/handlers]
+    002 --> 004[Task 004: Shared DB and intake]
+    003 --> 004
+    002 --> 007[Task 007: Cloudflare OpenTofu + tunnel unit]
+    003 --> 005[Task 005: Web app]
+    004 --> 005
+    003 --> 006
+    004 --> 006
+    005 --> 008
+    006 --> 008
+    007 --> 008
+```
+
+## Execution Blueprint
+
+**Validation Gates:**
+- Reference: `/config/hooks/POST_PHASE.md`
+
+### ✅ Phase 1: Printer Spike and Scaffold
+**Parallel Tasks:**
+- ✔️ Task 001: CUPS + SpliX proof print on the Pi (guided with the user)
+- ✔️ Task 002: Monorepo scaffold and tooling
+
+### Phase 2: Shared Logic and Infrastructure
+**Parallel Tasks:**
+- Task 003: Shared Drive URL parsing, retry policy, Drive client, handler registry (depends on: 002)
+- Task 007: Cloudflare Tunnel and Access in OpenTofu, tunnel systemd unit (depends on: 002)
+
+### Phase 3: Shared Database
+**Parallel Tasks:**
+- Task 004: Shared data source, PrintJob entity, partial index, job intake (depends on: 002, 003)
+
+### Phase 4: Applications
+**Parallel Tasks:**
+- Task 005: Web app (depends on: 003, 004)
+- Task 006: Worker app (depends on: 001, 003, 004)
+
+### Phase 5: Documentation
+**Parallel Tasks:**
+- Task 008: README, AGENTS.md, CLAUDE.md (depends on: 001, 005, 006, 007)
+
+### Post-phase Actions
+
+### Execution Summary
+- Total Phases: 5
+- Total Tasks: 8

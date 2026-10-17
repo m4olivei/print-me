@@ -1,3 +1,46 @@
 
 # APM dependencies
 apm_modules/
+
+# Local environment files (secrets); committed specs live in .env.example
+.env
+.env.*
+!.env.example
+
+# Google service-account key, in case it is placed inside the checkout
+# (the documented location is outside it)
+*service-account*.json
+gcp-key*.json
+
+# OpenTofu (infra/cloudflare): local state holds the tunnel token and the Access
+# service token secret; tfvars holds account and zone IDs and the hostname.
+# Committed specs live in terraform.tfvars.example. .terraform.lock.hcl IS
+# committed: it contains no secrets and pins provider versions.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+.terraform.tfstate.lock.info
+crash*.log
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Misc
+*.log
+.DS_Store
+
+# Pi deployment: the SQLite database lives in data/ (default DB_PATH), and the
+# print-me service user's HOME is the checkout (/opt/print-me), so tool dotfiles
+# (pnpm/corepack/npm caches, shell histories) land in the repo root.
+/data/
+/.cache/
+/.local/
+/.npm/
+/.bash_history
+/.sqlite_history
+/.viminfo
