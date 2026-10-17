@@ -1,0 +1,37 @@
+# print-me-worker.service — systemd unit for the print queue worker.
+#
+# Expected install layout on the Raspberry Pi (see README "Deploying"):
+#   - Dedicated system user `print-me` owning the checkout and the database,
+#     and allowed to submit to the CUPS queue (`sudo -u print-me lp -d <queue> sample.pdf`)
+#   - Repo checked out at /opt/print-me
+#   - Built once with: pnpm install && pnpm run build
+#     (produces /opt/print-me/apps/worker/dist/index.js)
+#   - Env file at /opt/print-me/apps/worker/.env (copy .env.example)
+#
+# Using a different location or user? The User= line and the three absolute
+# paths below (WorkingDirectory=, EnvironmentFile=, ExecStart=) are the only
+# things to change — edit them before copying this file into /etc/systemd/system.
+#
+# Install:
+#   sudo cp /opt/print-me/apps/worker/print-me-worker.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now print-me-worker
+# Logs:
+#   journalctl -u print-me-worker -f
+
+[Unit]
+Description=print-me print queue worker (Google Drive to CUPS)
+After=network-online.target cups.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=print-me
+WorkingDirectory=/opt/print-me/apps/worker
+EnvironmentFile=/opt/print-me/apps/worker/.env
+ExecStart=/usr/bin/node /opt/print-me/apps/worker/dist/index.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

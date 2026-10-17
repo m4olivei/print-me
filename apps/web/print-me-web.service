@@ -1,0 +1,81 @@
+# print-me-web.service — systemd unit for the Fastify print webhook (apps/web).
+#
+# Expected install layout on the Raspberry Pi (see README): a dedicated
+# loginless `print-me` system user, the repo at /opt/print-me, built once with
+# `pnpm install && pnpm run build` (produces /opt/print-me/apps/web/dist), and
+# the SQLite database directory /opt/print-me/data owned by `print-me` (the
+# default DB_PATH lives there and the worker uses the same file).
+#
+# Configuration comes from /opt/print-me/apps/web/.env (copied from the
+# committed .env.example). systemd loads it through EnvironmentFile= below; the
+# app also reads it itself at startup, so `node dist/index.js` run by hand
+# behaves the same.
+#
+# The app is published through Cloudflare Tunnel + Cloudflare Access
+# (print-me-tunnel.service, infra/cloudflare), so it listens on 127.0.0.1 only:
+# the tunnel connector on the same host is its sole client. That is deliberate:
+# authentication is enforced at the Cloudflare edge and the app itself has none,
+# so a port open to the LAN would be an unauthenticated way around it. The
+# listen host is fixed in code; PORT (default 3100) must match web_port in
+# infra/cloudflare.
+#
+# Install:
+#   sudo install -d -o print-me -g print-me -m 0750 /opt/print-me/data
+#   sudo cp /opt/print-me/apps/web/print-me-web.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now print-me-web
+# Health (on the Pi):
+#   curl -s http://127.0.0.1:3100/healthz   # {"ok":true}
+# Logs (Fastify's pino logger writes JSON lines to stdout):
+#   journalctl -u print-me-web -f
+
+[Unit]
+Description=print-me webhook (Fastify)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=print-me
+Group=print-me
+WorkingDirectory=/opt/print-me/apps/web
+EnvironmentFile=/opt/print-me/apps/web/.env
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node /opt/print-me/apps/web/dist/index.js
+Restart=always
+RestartSec=5
+
+# Hardening: the app binds one loopback port, writes only the SQLite database
+# (plus its -wal/-shm files) and makes no outbound connections. If DB_PATH is
+# moved out of /opt/print-me/data, update ReadWritePaths= to match.
+# MemoryDenyWriteExecute= is left off on purpose: it breaks V8's JIT. Check with:
+#   systemd-analyze security print-me-web
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ReadWritePaths=/opt/print-me/data
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectProc=invisible
+ProcSubset=pid
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+IPAddressAllow=localhost
+IPAddressDeny=any
+LockPersonality=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

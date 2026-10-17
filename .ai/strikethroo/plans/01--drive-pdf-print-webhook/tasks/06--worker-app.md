@@ -2,7 +2,7 @@
 id: 6
 group: "worker"
 dependencies: [1, 3, 4]
-status: "pending"
+status: "completed"
 created: 2026-10-17
 skills:
   - nodejs
@@ -20,13 +20,13 @@ Implement `apps/worker`: a long-running poll loop that claims one due job per ti
 nodejs, typescript.
 
 ## Acceptance Criteria
-- [ ] Env: `DB_PATH`, `GOOGLE_APPLICATION_CREDENTIALS` (or `GOOGLE_SERVICE_ACCOUNT_KEY_FILE`) path, `CUPS_PRINTER_NAME`, `PRINTER_DEVICE_URI` (documented as used only by the `lpadmin` setup step), `POLL_INTERVAL_MS` (default 10000), `MAX_FILE_BYTES` (default 52428800).
-- [ ] At startup, any `processing` jobs are reset to `queued`. Each tick picks the oldest `queued` job with `nextAttemptAt <= now`, moves it to `processing` before any work; ticks never overlap; one tick handles at most one job.
-- [ ] Attempt steps: metadata → reject `size > MAX_FILE_BYTES` (permanent) → handler lookup (unsupported = permanent) → download to a private temp dir (`fs.mkdtemp` under `os.tmpdir()`) → handler → `lp` helper → store `cupsJobId`, `mimeType`, mark `printed`; temp dir always removed in `finally`.
-- [ ] Failure: increments `attempts`, stores truncated `lastError` (e.g. ≤ 500 chars); permanent errors → `failed` immediately; otherwise shared retry policy → `queued` with backoff `nextAttemptAt`, or `failed` after the 5th attempt. Errors never stop the loop.
-- [ ] `lp` helper: `execFile('lp', ['-d', printer, ...options, '--', filePath])` (argument array, no shell), parses `request id is <queue>-<n>` to return the job ID; unparseable output throws with the raw output in the message. vitest tests with a stubbed exec cover a valid line and unparseable output.
-- [ ] `apps/worker/.env.example` with placeholders and a comment per variable; `print-me-worker.service` modelled on screen-time's worker unit (`Restart=always`, `User=print-me`, `/opt/print-me/apps/worker`).
-- [ ] Verification (local, no printer): run the worker against a temp DB containing a queued job with an invalid key path; move `nextAttemptAt` back with `sqlite3` between ticks (or use a short `POLL_INTERVAL_MS`); confirm `attempts` increments to 5, `lastError` is set and state ends `failed` with no further attempts. `pnpm --filter @print-me/worker test` (or the shared test command, wherever the lp test lives) exits 0; `pnpm run build && pnpm run check && pnpm run format:check` exit 0.
+- [x] Env: `DB_PATH`, `GOOGLE_APPLICATION_CREDENTIALS` (or `GOOGLE_SERVICE_ACCOUNT_KEY_FILE`) path, `CUPS_PRINTER_NAME`, `PRINTER_DEVICE_URI` (documented as used only by the `lpadmin` setup step), `POLL_INTERVAL_MS` (default 10000), `MAX_FILE_BYTES` (default 52428800).
+- [x] At startup, any `processing` jobs are reset to `queued`. Each tick picks the oldest `queued` job with `nextAttemptAt <= now`, moves it to `processing` before any work; ticks never overlap; one tick handles at most one job.
+- [x] Attempt steps: metadata → reject `size > MAX_FILE_BYTES` (permanent) → handler lookup (unsupported = permanent) → download to a private temp dir (`fs.mkdtemp` under `os.tmpdir()`) → handler → `lp` helper → store `cupsJobId`, `mimeType`, mark `printed`; temp dir always removed in `finally`.
+- [x] Failure: increments `attempts`, stores truncated `lastError` (e.g. ≤ 500 chars); permanent errors → `failed` immediately; otherwise shared retry policy → `queued` with backoff `nextAttemptAt`, or `failed` after the 5th attempt. Errors never stop the loop.
+- [x] `lp` helper: `execFile('lp', ['-d', printer, ...options, '--', filePath])` (argument array, no shell), parses `request id is <queue>-<n>` to return the job ID; unparseable output throws with the raw output in the message. vitest tests with a stubbed exec cover a valid line and unparseable output.
+- [x] `apps/worker/.env.example` with placeholders and a comment per variable; `print-me-worker.service` modelled on screen-time's worker unit (`Restart=always`, `User=print-me`, `/opt/print-me/apps/worker`).
+- [x] Verification (local, no printer): run the worker against a temp DB containing a queued job with an invalid key path; move `nextAttemptAt` back with `sqlite3` between ticks (or use a short `POLL_INTERVAL_MS`); confirm `attempts` increments to 5, `lastError` is set and state ends `failed` with no further attempts. `pnpm --filter @print-me/worker test` (or the shared test command, wherever the lp test lives) exits 0; `pnpm run build && pnpm run check && pnpm run format:check` exit 0.
 
 Use your internal Todo tool to track these and keep on track.
 

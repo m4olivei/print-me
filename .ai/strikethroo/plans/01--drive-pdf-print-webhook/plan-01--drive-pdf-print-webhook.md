@@ -406,10 +406,10 @@ graph TD
 **Parallel Tasks:**
 - ✔️ Task 004: Shared data source, PrintJob entity, partial index, job intake (depends on: 002, 003)
 
-### Phase 4: Applications
+### ✅ Phase 4: Applications
 **Parallel Tasks:**
-- Task 005: Web app (depends on: 003, 004)
-- Task 006: Worker app (depends on: 001, 003, 004)
+- ✔️ Task 005: Web app (depends on: 003, 004)
+- ✔️ Task 006: Worker app (depends on: 001, 003, 004)
 
 ### Phase 5: Documentation
 **Parallel Tasks:**
