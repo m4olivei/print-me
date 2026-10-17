@@ -420,3 +420,66 @@ graph TD
 ### Execution Summary
 - Total Phases: 5
 - Total Tasks: 8
+
+## Execution Summary
+
+**Status**: ✅ Completed Successfully
+**Completed Date**: 2026-10-17
+
+### Results
+All 8 tasks across 5 phases were completed on `feature/1--drive-pdf-print-webhook`, with one commit per phase (`204af53`, `ac33e80`, `8632497`, `e461ce5`, `0108dd3`). Deliverables:
+
+- A pnpm 11 monorepo with Prettier, plus the CUPS + SpliX proof print, which physically printed on the SCX-4623FW over `socket://<printer-ip>:9100`.
+- `packages/shared`, containing:
+  - Drive URL parsing.
+  - The retry policy.
+  - The service-account Drive client.
+  - The handler registry (PDF only).
+  - The TypeORM/SQLite data source and `PrintJob` entity.
+  - The raw-SQL partial unique index with a startup check.
+  - `intakeJob`, covering dedupe, the hourly cap with `retryAfterSeconds`, and constraint-race recovery.
+- `apps/web`: Fastify on 127.0.0.1 serving `POST /print`, `GET /print/:id` and `GET /healthz`.
+- `apps/worker`: the poll loop, size cap, an `lp` helper using `execFile`, and the retry and permanent-failure rules.
+- `infra/cloudflare`: OpenTofu config for the tunnel, DNS, the Access app, a service-token-only policy and a 1-year token, plus three systemd units.
+- `README.md`, `AGENTS.md`, `CLAUDE.md`, and the `.env.example` and `terraform.tfvars.example` files.
+
+The orchestrator re-ran the Self Validation steps itself before this summary:
+
+- **Step 1:** install, build, check and format:check all exit 0. Shared tests pass 53/53 and worker tests 8/8.
+- **Step 2:** the secret and PII scan is clean, and `git check-ignore` covers all four paths.
+- **Step 3:** the web smoke test passed every case:
+  - A new link returns 202, an invalid link returns 400, and an empty body returns 400.
+  - A duplicate returns 200 with the same id, leaving one row.
+  - The job shows `queued`. An unknown id returns 404, and `/healthz` returns 200.
+  - The index is listed, and the app listens only on `127.0.0.1`.
+  - With the cap at 2, the third request returns 429 with `retry-after: 3600` and a matching `retryAfterSeconds`.
+- **Step 4:** the worker retry run with an invalid key went through attempts 1–4 with +1, +2, +4 and +8 minute backoff, then `failed` at 5 with no further claims. The worker exited 0 on SIGTERM.
+- **Step 5:** `tofu init -backend=false`, `tofu validate` and `tofu fmt -check` all exit 0.
+
+### Noteworthy Events
+- **Code review gate result (verbatim):** `{"kind":"skipped","reason":"review-disabled","detail":"Code review is disabled. Set code_review.enabled to true in config/config.yaml or select Enable code review in Customize to opt in.","action":"continue","codeReview":"Skipped; Code review is disabled. Set code_review.enabled to true in config/config.yaml or select Enable code review in Customize to opt in."}`. No findings were produced, so none were acted on or ignored.
+- **Spike run by the user:** Task 1 was guided with the user on the Pi, because the development host is a cloud VM without CUPS or LAN access. A wrong printer IP at first showed that CUPS hands out job IDs even when jobs never print. That is recorded in `spike-results.md` and the README. The real `lp` output carries a trailing ` (1 file(s))`, and the parser and its tests cover it.
+- **Results file moved:** the spike results file was moved out of `tasks/` because it matched the task-file naming pattern.
+- **Dispatch identifier:** the dispatch scripts take harness id `claude`, not `claude-code`. The first resolve attempt returned `infrastructure-failure` with invalid arguments, and was retried with the correct id before anything launched.
+- **Dependencies pre-installed:** the orchestrator installed the Phase 4 app dependencies before dispatching the agents, so the two parallel agents would not edit `pnpm-lock.yaml` at the same time. Task 4 was also made to depend on task 3 for the same reason.
+- **Deviations accepted from the plan:**
+  - **Access rejection status:** Access returns a plain **401** (`service_auth_401_redirect = true`) instead of a 403 or redirect. The docs say 401, while the plan's Self Validation step 6.5 text still says "403 or redirect".
+  - **Index marker:** the partial index carries a TypeORM `@Index(..., { synchronize: false })` marker. It exists only so that `synchronize` does not drop the raw-SQL index. The raw SQL is still what creates it.
+  - **Intake transaction:** intake uses `BEGIN IMMEDIATE` rather than TypeORM's deferred `transaction()`.
+  - **Non-numeric job ids:** a non-numeric `/print/:id` returns 400.
+  - **Token rotation:** the service token uses `create_before_destroy` for rotation.
+  - **Unit locations:** the tunnel unit lives in `infra/cloudflare/`, the web and worker units in their app directories.
+- **README correction:** the orchestrator replaced the docs agent's suggestion to add `print-me` to the `lpadmin` group, which would grant CUPS admin rights. The README now points to the queue's user allow list instead.
+- **Validation slip:** during Self Validation, a stray web server from an earlier smoke run briefly made the 429 check look wrong. The process was killed and the check re-run on a fresh server, where it passed.
+
+### Necessary follow-ups
+- **Deployment checks on the Pi (Self Validation step 6, with the user):**
+  - Run `sudo -u print-me lp -d scx4623fw -- sample.pdf` to cover service-user permissions and the `--` form.
+  - Confirm `systemctl status` for all three units and the cloudflared `/ready` metrics.
+  - Check the external `curl` with and without the service-token headers, expecting 401 without them.
+  - Print a real Drive PDF end to end, ending in `printed` with a `cupsJobId`.
+  - Run `.indexes print_job` on the Pi database.
+- **Size-cap check (Self Validation step 4.4):** once Drive access works, run the worker with a tiny `MAX_FILE_BYTES` against a real PDF.
+- **Token-name check:** confirm on the first rotation that Cloudflare accepts `create_before_destroy` with a duplicate service-token name.
+- **Plan text:** optionally update Self Validation step 6.5 to expect 401.
+- **Code review:** enable `code_review.enabled` in `config/config.yaml` if a second-harness review is wanted on future plans.
