@@ -30,6 +30,8 @@ created: 2026-10-17
 | How should the worker submit to CUPS, given that `unix-print`'s last release was November 2023? *(source: webhook agent review → user)* | **Call `lp` directly** with Node's `execFile` (an argument array, no shell) and parse the CUPS job ID from its output. `unix-print` is dropped. |
 | Which optional extras go in? *(source: webhook agent review → user)* | **Both:** `GET /healthz` (behind Access) and a **Drive size cap** (`MAX_FILE_BYTES`, worker env, default 50 MB, checked from metadata before download; over the cap is a permanent failure). |
 | How long should the Access service token last? *(source: webhook agent review → user)* | **Cloudflare's default of 1 year (8760h).** OpenTofu outputs its expiry, and the README documents rotation and re-vaulting. |
+| How is the partial unique index created, given that TypeORM `synchronize` has historically been unreliable with partial (`WHERE`) indexes? *(source: webhook agent review → user)* | **Raw SQL at startup plus an assertion.** Tables stay on `synchronize: true`. After the data source initialises, the shared package runs `CREATE UNIQUE INDEX IF NOT EXISTS` on `driveFileId` `WHERE state IN ('queued','processing')`, then checks `sqlite_master` and refuses to start if the index is missing. On a unique-constraint error, job intake returns the existing active job (`200 { id }`). |
+| Should the 429 tell the caller when to retry? *(source: webhook agent review → user)* | **Yes:** the seconds until the oldest job in the 1-hour window ages out (rounded up, minimum 1), sent as both a `Retry-After` header and `retryAfterSeconds` in the JSON body. |
 
 ## Executive Summary
 
@@ -103,7 +105,9 @@ flowchart LR
 
 **Objective**: Keep all shared state, external clients and pure logic in one place so web and worker cannot drift apart.
 
-- **Data source**: a TypeORM `DataSource` on `better-sqlite3` with `synchronize: true` (greenfield, as in screen-time). WAL journal mode and a busy timeout let the web process and worker write at the same time. The database location comes from a `DB_PATH` env var that both apps set to the same file.
+- **Data source**: a TypeORM `DataSource` on `better-sqlite3` with `synchronize: true` for tables (greenfield, as in screen-time). WAL journal mode and a busy timeout let the web process and worker write at the same time. The database location comes from a `DB_PATH` env var that both apps set to the same file. A shared initialisation step, used by both apps, runs after the data source initialises:
+  1. It creates the partial unique index (below) with raw SQL (`CREATE UNIQUE INDEX IF NOT EXISTS`), because TypeORM `synchronize` has historically been unreliable with partial indexes.
+  2. It checks `sqlite_master` for that index and **refuses to start** if it is missing, so the dedupe backstop can never be silently absent. See Plan Clarifications (index creation).
 - **`PrintJob` entity** (`print_job` table) with these fields:
   - Generated id.
   - The submitted Drive URL and the extracted `driveFileId`.
@@ -115,13 +119,15 @@ flowchart LR
   - The `cupsJobId` returned by `lp`.
   - `createdAt` and `updatedAt`.
 
-  A **partial unique index** on `driveFileId` covering only rows in `queued` or `processing` makes "one active job per Drive file" a database guarantee rather than just an application check.
+  A **partial unique index** on `driveFileId` covering only rows in `queued` or `processing` makes "one active job per Drive file" a database guarantee rather than just an application check. It is created by the initialisation step above, **not** declared through TypeORM.
 - **Job intake** (one function, used by the web app, tested against a temporary SQLite file): in a single transaction it
   1. returns the existing job if one for the same `driveFileId` is `queued` or `processing` (the deduplicated case);
   2. otherwise counts jobs created in the last hour and refuses if the count has reached `MAX_JOBS_PER_HOUR`;
   3. otherwise inserts a new `queued` job with `nextAttemptAt = now`.
 
-  Dedupe is checked before the cap, so a retried request never counts toward the cap. See Plan Clarifications (idempotency, abuse cap).
+  If the insert fails with a unique-constraint error (`SQLITE_CONSTRAINT_UNIQUE`, meaning a concurrent request won the race), intake re-reads the active job for that `driveFileId` and returns it as the deduplicated case. Any other error propagates. When it refuses for the cap, intake also returns **`retryAfterSeconds`**: the seconds until the oldest job in the 1-hour window ages out, rounded up, minimum 1.
+
+  Dedupe is checked before the cap, so a retried request never counts toward the cap. See Plan Clarifications (idempotency, abuse cap, index creation, 429 retry hint).
 - **Drive URL parsing** (pure, unit-tested): extracts the file ID from the common Drive link shapes (`/file/d/<id>/…`, `open?id=<id>`, `uc?id=<id>`) and rejects anything else.
 - **Retry policy** (pure, unit-tested): one place owns `MAX_ATTEMPTS = 5` and the backoff schedule (1, 2, 4, 8 minutes). Given the attempt count it returns either the next attempt time or "give up".
 - **Drive client**: uses Google's official Node client authenticated as the service account (key file path from env, read-only Drive scope). Exposes "get metadata (name, mimeType, size)" and "download content to a local temp file".
@@ -137,7 +143,7 @@ flowchart LR
   2. Parses the Drive file ID and returns 400 if the link is not a recognised Drive link.
   3. Runs the shared job-intake function and maps its result:
      - an existing active job for the same file → `200 { id }`;
-     - the hourly cap reached → `429` with a short error message;
+     - the hourly cap reached → `429` with a `Retry-After` header and a JSON body carrying a short error message and `retryAfterSeconds` (the same value);
      - a new job → `202 { id }`.
 - `GET /print/:id` returns the job's `id`, `state`, `attempts`, `lastError`, `cupsJobId`, `createdAt` and `updatedAt`, or 404.
 - `GET /healthz` runs a trivial SQLite query and returns `200 { ok: true }`. Like every route, it sits behind Access, so it lets the agent tell an Access rejection (403), a down app (502) and a down tunnel (1033) apart.
@@ -208,6 +214,8 @@ flowchart LR
     - **Mitigation**: the job is updated straight after `lp` returns. The window is accepted as negligible for this workload and recorded in AGENTS.md.
 - **Retried webhook calls**: a client timeout after the row is inserted, followed by a retry, could queue the same document twice.
     - **Mitigation**: dedupe on `driveFileId` while a job is active, guaranteed by the partial unique index (see Job intake).
+- **The partial index silently missing**: TypeORM `synchronize` has historically been unreliable with partial (`WHERE`) indexes. Without the index, concurrent duplicate requests could both insert.
+    - **Mitigation**: the index is created with raw SQL at startup, startup fails if `sqlite_master` doesn't list it, and tests prove that a duplicate active insert hits the constraint and that intake recovers with the existing id.
 - **`lp` output format**: the CUPS job ID is parsed from `lp`'s text output, which a CUPS upgrade could in principle change.
     - **Mitigation**: the parser is unit-tested on the known format, and unparseable output fails the attempt loudly with the raw output in `lastError` rather than marking the job printed.
 - **Drive file not yet visible**: the agent may POST before the upload has finished or before sharing has propagated.
@@ -244,7 +252,7 @@ flowchart LR
 
 1. `POST /print` with a valid Drive link returns `202 { id }` and creates a `queued` row. An invalid link returns 400. `GET /print/:id` reports the job's current state, and `GET /healthz` returns 200.
 2. Posting the same Drive link again while its job is `queued` or `processing` returns `200` with the same `id` and creates no row. Once the job is `printed` or `failed`, posting it again creates a new job.
-3. Once `MAX_JOBS_PER_HOUR` jobs have been created in the last hour, `POST /print` returns 429.
+3. Once `MAX_JOBS_PER_HOUR` jobs have been created in the last hour, `POST /print` returns 429 with a `Retry-After` header and a matching `retryAfterSeconds` in the body. The partial unique index exists in the database (`sqlite_master`), and a duplicate active insert is rejected by it.
 4. Within one poll interval, the worker downloads a PDF from the shared Drive folder as the service account, submits it to the CUPS queue, and the SCX-4623FW physically prints it. The row ends in `printed` with a CUPS job ID.
 5. A job whose fetch or print keeps failing is retried with the 1/2/4/8-minute backoff and ends in `failed` after exactly 5 attempts with `lastError` set. A non-PDF file, or one larger than `MAX_FILE_BYTES`, ends in `failed` after one attempt.
 6. From outside the LAN, a request with the service-token headers reaches the app, and a request without them is rejected by Cloudflare Access. All Cloudflare resources come from `tofu apply`.
@@ -254,7 +262,7 @@ flowchart LR
 
 After all tasks are complete, run the following:
 
-1. **Static checks**: `pnpm install`, `pnpm run build`, `pnpm run check`, `pnpm run format:check`, and `pnpm --filter @print-me/shared test`. All must exit 0. The tests must cover Drive URL parsing (each accepted shape plus rejections), the retry policy (backoff sequence and give-up after the 5th attempt), job intake (dedupe while active, a new job after `printed`/`failed`, the hourly cap, and dedupe not counting toward the cap), and the `lp` output parser (a valid `request id is` line and unparseable output).
+1. **Static checks**: `pnpm install`, `pnpm run build`, `pnpm run check`, `pnpm run format:check`, and `pnpm --filter @print-me/shared test`. All must exit 0. The tests must cover Drive URL parsing (each accepted shape plus rejections), the retry policy (backoff sequence and give-up after the 5th attempt), job intake (dedupe while active, a new job after `printed`/`failed`, the hourly cap with a correct `retryAfterSeconds`, and dedupe not counting toward the cap), the partial index (present in `sqlite_master` after initialisation; a second active row for the same `driveFileId` inserted straight into the database fails with `SQLITE_CONSTRAINT_UNIQUE`; intake recovers from that constraint error by returning the existing id), and the `lp` output parser (a valid `request id is` line and unparseable output).
 2. **Secret and PII scan**: run `git ls-files` plus a `grep` over tracked files for private-IP patterns (`192\.168\.`, `10\.`), `@gmail.com`, `"private_key"`, `BEGIN PRIVATE KEY`, and long token-like strings. Only documented placeholders may match. Confirm `git check-ignore` covers `apps/web/.env`, `apps/worker/.env`, `infra/cloudflare/terraform.tfvars` and `infra/cloudflare/terraform.tfstate`.
 3. **Web endpoint smoke test (local)**:
    1. Start the web app with a temp `DB_PATH`.
@@ -265,9 +273,9 @@ After all tasks are complete, run the following:
    6. `curl` `GET /print/<id>`: expect `state: "queued"`.
    7. `curl` `GET /print/999999`: expect 404.
    8. `curl` `GET /healthz`: expect 200 `{ "ok": true }`.
-   9. Query the SQLite file with `sqlite3` to confirm the row and its `driveFileId`.
+   9. Query the SQLite file with `sqlite3` to confirm the row and its `driveFileId`, and run `.indexes print_job` to confirm the partial unique index exists.
    10. Confirm the server is listening only on `127.0.0.1` (`ss -ltnp`).
-   11. Restart the web app with `MAX_JOBS_PER_HOUR=2` and a fresh DB: POST two **different** Drive URLs (202 each), then a third: expect 429.
+   11. Restart the web app with `MAX_JOBS_PER_HOUR=2` and a fresh DB: POST two **different** Drive URLs (202 each), then a third: expect 429 with a `Retry-After` header and a `retryAfterSeconds` body field holding the same positive value (`curl -i`).
 4. **Worker retry behaviour (local, no printer)**:
    1. Run the worker against the same temp DB with an invalid service-account key path or an unreachable file ID.
    2. Shorten the backoff via test seams or move `nextAttemptAt` back with `sqlite3`.
@@ -282,6 +290,7 @@ After all tasks are complete, run the following:
    5. From outside, `curl -X POST https://<host>/print` without headers returns an Access 403 or redirect.
    6. The same request with the `CF-Access-Client-Id` and `CF-Access-Client-Secret` headers and a real Drive PDF link returns 202. `GET https://<host>/healthz` with the headers returns 200, and without them is rejected by Access.
    7. `GET /print/<id>` progresses to `printed` with a `cupsJobId`, and the page comes out of the printer.
+   8. `sqlite3 <DB_PATH> '.indexes print_job'` on the Pi lists the partial unique index.
 
 ## Documentation
 
@@ -348,7 +357,7 @@ All routes sit behind Cloudflare Access and need the `CF-Access-Client-Id` and `
 
 | Route | Request | Responses |
 | --- | --- | --- |
-| `POST /print` | JSON body `{ "url": "<Google Drive file link>" }` | `202 { id }` new job queued · `200 { id }` a job for the same Drive file is already `queued`/`processing` · `400` missing body or not a recognised Drive link · `429` hourly cap reached |
+| `POST /print` | JSON body `{ "url": "<Google Drive file link>" }` | `202 { id }` new job queued · `200 { id }` a job for the same Drive file is already `queued`/`processing` · `400` missing body or not a recognised Drive link · `429` hourly cap reached: `Retry-After: <seconds>` header and body `{ error, retryAfterSeconds }` |
 | `GET /print/:id` | none | `200 { id, state, attempts, lastError, cupsJobId, createdAt, updatedAt }` · `404` unknown id |
 | `GET /healthz` | none | `200 { ok: true }` |
 
@@ -357,3 +366,4 @@ All routes sit behind Cloudflare Access and need the `CF-Access-Client-Id` and `
 ### Change Log
 
 - 2026-10-17: Incorporated the webhook agent's review: `driveFileId` dedupe while a job is active (`200` with the existing id, partial unique index), an app-level hourly cap (`MAX_JOBS_PER_HOUR`, `429`), `GET /healthz`, a Drive size cap (`MAX_FILE_BYTES`, permanent failure), and calling `lp` directly instead of `unix-print`. Kept the 1/2/4/8-minute backoff and the 1-year service token, with its expiry as an OpenTofu output. Added the webhook API data contract.
+- 2026-10-17: Second round of agent feedback: the partial unique index is created with raw SQL at startup (TypeORM `synchronize` is unreliable for partial indexes), startup checks that it exists, and job intake turns a unique-constraint error into the deduplicated `200`. The 429 now carries `Retry-After` and `retryAfterSeconds`. Tests and validation updated.
