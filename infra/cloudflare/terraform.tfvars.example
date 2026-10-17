@@ -1,0 +1,16 @@
+# Copy to terraform.tfvars and fill in real values (the .tfvars itself is
+# git-ignored). The Cloudflare API token is NOT set here; export it instead:
+#
+#   export CLOUDFLARE_API_TOKEN=...
+#
+# so it stays out of the repo and out of any file on disk.
+
+# Dashboard overview page, right-hand column.
+account_id = "<account-id>"
+zone_id    = "<zone-id>"
+
+# Public hostname of the webhook: a single label under the zone.
+hostname = "print.example.com"
+
+# Default matches the web app's PORT; override only if apps/web/.env changes it.
+# web_port = 3100

@@ -397,10 +397,10 @@ graph TD
 - ✔️ Task 001: CUPS + SpliX proof print on the Pi (guided with the user)
 - ✔️ Task 002: Monorepo scaffold and tooling
 
-### Phase 2: Shared Logic and Infrastructure
+### ✅ Phase 2: Shared Logic and Infrastructure
 **Parallel Tasks:**
-- Task 003: Shared Drive URL parsing, retry policy, Drive client, handler registry (depends on: 002)
-- Task 007: Cloudflare Tunnel and Access in OpenTofu, tunnel systemd unit (depends on: 002)
+- ✔️ Task 003: Shared Drive URL parsing, retry policy, Drive client, handler registry (depends on: 002)
+- ✔️ Task 007: Cloudflare Tunnel and Access in OpenTofu, tunnel systemd unit (depends on: 002)
 
 ### Phase 3: Shared Database
 **Parallel Tasks:**

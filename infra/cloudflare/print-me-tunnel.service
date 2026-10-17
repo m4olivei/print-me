@@ -1,0 +1,107 @@
+# print-me-tunnel.service — systemd unit for the Cloudflare Tunnel connector
+# that publishes the print webhook at https://<hostname> (the `hostname`
+# variable in infra/cloudflare). It is the only client of print-me-web.service,
+# which listens on 127.0.0.1:3100 (web_port in infra/cloudflare).
+#
+# It runs next to screen-time's connector (screen-time-tunnel.service) on the
+# same Raspberry Pi without clashing: a different tunnel, a different token
+# file (/etc/cloudflared/print-me.token, not /etc/cloudflared/token) and a
+# different metrics port (20242, not 20241). Both connectors share the
+# `cloudflared` binary, system user and /etc/cloudflared directory.
+#
+# Expected install layout on the Pi (see README): cloudflared installed from
+# Cloudflare's apt repository (binary at /usr/bin/cloudflared), a dedicated
+# loginless `cloudflared` system user, and this tunnel's token, the only secret
+# this unit needs, at /etc/cloudflared/print-me.token, root:cloudflared, mode
+# 0640.
+#
+# The token is NEVER committed. It comes from
+#   tofu -chdir=infra/cloudflare output -raw tunnel_token
+# on the machine that runs OpenTofu, and is pasted into
+# /etc/cloudflared/print-me.token on the Pi. Rotating it means replacing that
+# file and restarting this unit.
+#
+# The tunnel is remotely configured (config_src = "cloudflare"), so there is no
+# /etc/cloudflared/config.yml: the ingress rules live in infra/cloudflare and
+# are pushed from the edge. Nothing in this file is environment-specific: the
+# hostname and web port live in OpenTofu.
+#
+# Running as a non-root user logs three benign lines at startup that are NOT
+# worth "fixing": "ICMP proxy feature is disabled" and the ping_group_range
+# warning (the ICMP proxy is only for WARP private networking), and "Cannot
+# determine default origin certificate path" (token-run tunnels have no
+# cert.pem, which is also why `cloudflared tunnel info` does not work here;
+# use the /ready endpoint below or the Zero Trust dashboard).
+#
+# Install (the first two commands are already done if screen-time's tunnel is
+# installed on this Pi; skip them then):
+#   sudo useradd --system --user-group --no-create-home --shell /usr/sbin/nologin cloudflared
+#   sudo install -d -o root -g cloudflared -m 0750 /etc/cloudflared
+#   sudo install -o root -g cloudflared -m 0640 /dev/null /etc/cloudflared/print-me.token
+#   sudoedit /etc/cloudflared/print-me.token   # paste the token, nothing else
+#   sudo cp /opt/print-me/infra/cloudflare/print-me-tunnel.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now print-me-tunnel
+# Health:
+#   curl -s http://127.0.0.1:20242/ready   # {"status":200,"readyConnections":4,...}
+# Logs:
+#   journalctl -u print-me-tunnel -f
+
+[Unit]
+Description=Cloudflare Tunnel for the print-me webhook
+Documentation=https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/
+# Ordering only, deliberately not Requires=: if the web app is down you still
+# want the tunnel up, because a live tunnel with a dead origin gives a
+# diagnosable 502, while no tunnel gives an opaque Cloudflare error 1033.
+After=network-online.target print-me-web.service
+Wants=network-online.target
+
+[Service]
+# cloudflared sends sd_notify READY=1 once its first edge connection registers,
+# so `systemctl start` blocks until the tunnel is genuinely up.
+Type=notify
+TimeoutStartSec=30
+User=cloudflared
+# --no-autoupdate: the binary is apt-managed (see README); cloudflared's
+#   self-updater refuses to run on package-manager installs anyway.
+# --token-file: keeps the tunnel token out of both argv and the environment.
+#   Its own file, so screen-time's /etc/cloudflared/token is left untouched.
+# --metrics: pins the local health endpoint, which otherwise lands on the first
+#   free port in 20241-20245. 20242 because screen-time's connector pins 20241.
+ExecStart=/usr/bin/cloudflared --no-autoupdate --metrics 127.0.0.1:20242 tunnel run --token-file /etc/cloudflared/print-me.token
+Restart=always
+RestartSec=5
+
+# Hardening: cloudflared binds nothing privileged, makes only outbound
+# connections, and reads one file. Do NOT add PrivateNetwork=: it has to reach
+# the web app on loopback. MemoryDenyWriteExecute= and DynamicUser= are also
+# left off on purpose (the former can break Go binaries at runtime, the latter
+# makes the token file unownable). Check with:
+#   systemd-analyze security print-me-tunnel
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectProc=invisible
+ProcSubset=pid
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+# AF_UNIX is required for sd_notify; AF_NETLINK for Go's local interface lookup.
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+LockPersonality=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

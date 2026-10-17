@@ -2,7 +2,7 @@
 id: 3
 group: "shared"
 dependencies: [2]
-status: "pending"
+status: "completed"
 created: 2026-10-17
 skills:
   - typescript
@@ -19,12 +19,12 @@ Add the non-database shared logic to `packages/shared`: a pure Drive URL parser,
 typescript, google-drive-api.
 
 ## Acceptance Criteria
-- [ ] `parseDriveFileId(url: string): string | null` accepts `https://drive.google.com/file/d/<id>/view…`, `…/open?id=<id>`, `…/uc?id=<id>` (with or without extra query params) and returns the ID; rejects other hosts, malformed URLs, and missing IDs.
-- [ ] Retry policy module exports `MAX_ATTEMPTS = 5` and a function that, given the attempt count just used (1–5) and `now`, returns `{ retryAt: Date }` with backoff 1, 2, 4, 8 minutes for attempts 1–4, or `{ giveUp: true }` after attempt 5.
-- [ ] Drive client (official `googleapis` or `@googleapis/drive` + `google-auth-library`), authenticated from a key-file path argument with scope `https://www.googleapis.com/auth/drive.readonly`, exposing `getMetadata(fileId) → { name, mimeType, size }` and `downloadToFile(fileId, destPath)`; uses `supportsAllDrives: true`.
-- [ ] Handler registry: `DocumentHandler` interface `{ mimeType; prepare(filePath) → Promise<{ filePath; lpOptions: string[] }> }`, a `getHandler(mimeType)` lookup, a registered `application/pdf` pass-through handler, and an `UnsupportedDocumentTypeError` (permanent) plus a `PermanentJobError` base class that the worker can detect to skip retries.
-- [ ] vitest tests cover each accepted URL shape plus rejections, and the full backoff sequence plus give-up after the 5th attempt. Verification: `pnpm --filter @print-me/shared test` exits 0, and `pnpm run build && pnpm run check && pnpm run format:check` exit 0.
-- [ ] Everything is exported from the shared package's entry point.
+- [x] `parseDriveFileId(url: string): string | null` accepts `https://drive.google.com/file/d/<id>/view…`, `…/open?id=<id>`, `…/uc?id=<id>` (with or without extra query params) and returns the ID; rejects other hosts, malformed URLs, and missing IDs.
+- [x] Retry policy module exports `MAX_ATTEMPTS = 5` and a function that, given the attempt count just used (1–5) and `now`, returns `{ retryAt: Date }` with backoff 1, 2, 4, 8 minutes for attempts 1–4, or `{ giveUp: true }` after attempt 5.
+- [x] Drive client (official `googleapis` or `@googleapis/drive` + `google-auth-library`), authenticated from a key-file path argument with scope `https://www.googleapis.com/auth/drive.readonly`, exposing `getMetadata(fileId) → { name, mimeType, size }` and `downloadToFile(fileId, destPath)`; uses `supportsAllDrives: true`.
+- [x] Handler registry: `DocumentHandler` interface `{ mimeType; prepare(filePath) → Promise<{ filePath; lpOptions: string[] }> }`, a `getHandler(mimeType)` lookup, a registered `application/pdf` pass-through handler, and an `UnsupportedDocumentTypeError` (permanent) plus a `PermanentJobError` base class that the worker can detect to skip retries.
+- [x] vitest tests cover each accepted URL shape plus rejections, and the full backoff sequence plus give-up after the 5th attempt. Verification: `pnpm --filter @print-me/shared test` exits 0, and `pnpm run build && pnpm run check && pnpm run format:check` exit 0.
+- [x] Everything is exported from the shared package's entry point.
 
 Use your internal Todo tool to track these and keep on track.
 

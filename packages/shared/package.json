@@ -12,5 +12,9 @@
 	},
 	"devDependencies": {
 		"vitest": "^4.1.10"
+	},
+	"dependencies": {
+		"@googleapis/drive": "^26.0.2",
+		"google-auth-library": "^11.3.1"
 	}
 }
