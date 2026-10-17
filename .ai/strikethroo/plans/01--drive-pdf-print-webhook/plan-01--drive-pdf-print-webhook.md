@@ -14,7 +14,7 @@ created: 2026-10-17
 
 | Question | Answer |
 | --- | --- |
-| What host and runtime will web, worker and cloudflared run on? | The same Raspberry Pi (Linux) that already runs another of the user's apps (the "sibling app" below), using **systemd with no Docker**. Mirror the sibling app's setup conventions and requirements where relevant. |
+| What host and runtime will web, worker and cloudflared run on? | The same Raspberry Pi (Linux) that runs the user's `m4olivei/screen-time` app, using **systemd with no Docker**. Mirror screen-time's setup conventions and requirements where relevant. |
 | How does the worker send the PDF to the printer? | **CUPS on the Pi plus the `unix-print` npm package** (a typed wrapper around `lp`). CUPS converts the PDF with the printer driver. |
 | How do webhook callers authenticate? | A **Cloudflare Access service token** checked at the edge (`CF-Access-Client-Id` / `CF-Access-Client-Secret` headers). The app has no auth of its own and binds to `127.0.0.1`. |
 | How does the worker authenticate to Google Drive? | With a **Google Cloud service account**. The print folder is shared with the service account's email as Viewer, and its JSON key file sits on the Pi at a path set in env. |
@@ -29,7 +29,7 @@ created: 2026-10-17
 
 This plan builds a small self-hosted print service on a Raspberry Pi on the local network. An AI agent saves a PDF to a shared Google Drive folder and POSTs its link to a public webhook. The webhook records a job in SQLite and returns right away. A separate worker process polls the queue, downloads the file from Drive as a service account, and submits it to a local CUPS queue for the Samsung SCX-4623FW. Cloudflare Tunnel publishes the webhook without opening any inbound port. Cloudflare Access, with a service token, is the only authentication layer. All Cloudflare resources are declared in OpenTofu.
 
-The architecture copies a proven sibling app already running on the same Pi: a pnpm workspace with `apps/web`, `apps/worker` and `packages/shared`; TypeORM over `better-sqlite3` as the only shared state between the processes; systemd units under a dedicated service user in `/opt`; `cloudflared` from Cloudflare's apt repo running with a token file; and OpenTofu (Cloudflare provider v5) with local, git-ignored state. Reusing those patterns keeps operations familiar and avoids new infrastructure decisions.
+The architecture copies the proven `screen-time` project on the same Pi: a pnpm workspace with `apps/web`, `apps/worker` and `packages/shared`; TypeORM over `better-sqlite3` as the only shared state between the processes; systemd units under a dedicated service user in `/opt`; `cloudflared` from Cloudflare's apt repo running with a token file; and OpenTofu (Cloudflare provider v5) with local, git-ignored state. Reusing those patterns keeps operations familiar and avoids new infrastructure decisions.
 
 Printing goes through CUPS rather than straight to the printer. The SCX-4623FW is a low-cost Samsung laser that most likely speaks only Samsung's proprietary SPL language, so raw PDF sent to port 9100 or IPP would not print. CUPS with the open-source SpliX driver (available for ARM through Debian's `printer-driver-splix`) converts PDF to SPL. The worker then only needs `lp`, which the maintained `unix-print` package wraps. A spike early in execution confirms this end to end before the rest is built on it.
 
@@ -49,7 +49,7 @@ Printing goes through CUPS rather than straight to the printer. The SCX-4623FW i
 
 ### Background
 
-- **Reference implementation.** A sibling app already deployed on the same Pi sets the conventions to copy. Its parts:
+- **Reference implementation.** `github.com/m4olivei/screen-time` runs on the same Pi and sets the conventions to copy. Its parts:
   - Root `package.json` with `build`, `check`, `format` and `format:check` scripts, and `packageManager` pinned to pnpm 11.
   - `pnpm-workspace.yaml` covering `packages/*` and `apps/*`, with `allowBuilds` set for `better-sqlite3` and `esbuild`.
   - `tsconfig.base.json`.
@@ -63,9 +63,9 @@ Printing goes through CUPS rather than straight to the printer. The SCX-4623FW i
   - `infra/cloudflare/` with `versions.tf`, `variables.tf`, `tunnel.tf`, `access.tf`, `outputs.tf`, `terraform.tfvars.example`, and a committed `.terraform.lock.hcl`.
   - A `.gitignore` that excludes `.env*` (except examples), tfstate and tfvars.
 - **Printer language.** Inexpensive Samsung lasers of this generation usually support only SPL, not PostScript or PCL. SpliX is the open-source CUPS driver for SPL printers, and Samsung's proprietary Unified Linux Driver is effectively x86-only.
-- **Pi state (verified).** arm64 Debian 13 with Node 24 LTS, already serving the sibling app. CUPS, `cups-filters` and `printer-driver-splix` are installed with `--no-install-recommends`. `cups-browsed` is **not** installed, and CUPS listens on loopback only. SpliX ships a **model-specific PPD**, `drv:///splix-samsung.drv/scx4623fw.ppd` ("Samsung SCX-4623fw"). What is still unproven is a physical print through it.
-- **pnpm.** Pin `packageManager` to the same pnpm 11.20.0 as the sibling app, so both projects on the Pi use one version. Outside a pinned project, corepack's default is 12.x.
-- **Shared Cloudflare account.** The domain and Zero Trust organisation already exist for the sibling app. This project creates its **own** tunnel, DNS record and Access application in its own OpenTofu state, so the two apps can be deployed and torn down independently. Unlike the sibling app, no Google identity provider is involved: only a service token gets through.
+- **Pi state (verified).** arm64 Debian 13 with Node 24 LTS, already serving screen-time. CUPS, `cups-filters` and `printer-driver-splix` are installed with `--no-install-recommends`. `cups-browsed` is **not** installed, and CUPS listens on loopback only. SpliX ships a **model-specific PPD**, `drv:///splix-samsung.drv/scx4623fw.ppd` ("Samsung SCX-4623fw"). What is still unproven is a physical print through it.
+- **pnpm.** Pin `packageManager` to the same pnpm 11.20.0 as screen-time, so both projects on the Pi use one version. Outside a pinned project, corepack's default is 12.x.
+- **Shared Cloudflare account.** The domain and Zero Trust organisation already exist for screen-time. This project creates its **own** tunnel, DNS record and Access application in its own OpenTofu state, so the two apps can be deployed and torn down independently. Unlike screen-time, no Google identity provider is involved: only a service token gets through.
 - **Public repo.** No hostnames, IP addresses, email addresses, account or zone IDs, folder IDs, keys or tokens may be committed. Examples use placeholders such as `print.example.com` and `<printer-ip>`.
 
 ## Architectural Approach
@@ -89,15 +89,15 @@ flowchart LR
 
 **Objective**: Set up the workspace skeleton and conventions every other component builds on.
 
-- A pnpm workspace with `apps/web`, `apps/worker` and `packages/shared` (package name scoped like the sibling app, e.g. `@print-me/shared`). The workspace config and root scripts follow the sibling app conventions listed under Background.
-- TypeScript throughout, with a shared `tsconfig.base.json`. Prettier is the only formatter (`.prettierrc` matching the sibling app's style, minus the Svelte and Tailwind plugins this project doesn't need) plus a `.prettierignore`.
-- A root `.gitignore` adapted from the sibling app: `.env` files except examples, OpenTofu state/tfvars/`.terraform/`, `node_modules`, `dist`, the `/data/` directory holding the SQLite file, and service-user dotfiles in the checkout root. The Google service-account key file also gets an ignore pattern for the case where it is placed inside the checkout, although the documented location is outside it.
+- A pnpm workspace with `apps/web`, `apps/worker` and `packages/shared` (package name scoped like screen-time, e.g. `@print-me/shared`). The workspace config and root scripts follow the screen-time conventions listed under Background.
+- TypeScript throughout, with a shared `tsconfig.base.json`. Prettier is the only formatter (`.prettierrc` matching screen-time's style, minus the Svelte and Tailwind plugins this project doesn't need) plus a `.prettierignore`.
+- A root `.gitignore` adapted from screen-time: `.env` files except examples, OpenTofu state/tfvars/`.terraform/`, `node_modules`, `dist`, the `/data/` directory holding the SQLite file, and service-user dotfiles in the checkout root. The Google service-account key file also gets an ignore pattern for the case where it is placed inside the checkout, although the documented location is outside it.
 
 ### Shared Package: Database, Drive, Document Handlers, Retry Logic
 
 **Objective**: Keep all shared state, external clients and pure logic in one place so web and worker cannot drift apart.
 
-- **Data source**: a TypeORM `DataSource` on `better-sqlite3` with `synchronize: true` (greenfield, as in the sibling app). WAL journal mode and a busy timeout let the web process and worker write at the same time. The database location comes from a `DB_PATH` env var that both apps set to the same file.
+- **Data source**: a TypeORM `DataSource` on `better-sqlite3` with `synchronize: true` (greenfield, as in screen-time). WAL journal mode and a busy timeout let the web process and worker write at the same time. The database location comes from a `DB_PATH` env var that both apps set to the same file.
 - **`PrintJob` entity** (`print_job` table) with these fields:
   - Generated id.
   - The submitted Drive URL and the extracted `driveFileId`.
@@ -117,7 +117,7 @@ flowchart LR
 
 **Objective**: Accept print requests and report job status, and do nothing else.
 
-- A Fastify server that listens only on `127.0.0.1` (port from env, default similar to the sibling app's convention but distinct from its 3000), because the tunnel connector is its only client and any LAN-facing port would bypass Access.
+- A Fastify server that listens only on `127.0.0.1` (port from env, default similar to screen-time's convention but distinct from its 3000), because the tunnel connector is its only client and any LAN-facing port would bypass Access.
 - `POST /print`:
   1. Validates the JSON body with a Fastify schema: a single required `url` string.
   2. Parses the Drive file ID and returns 400 if the link is not a recognised Drive link.
@@ -126,7 +126,7 @@ flowchart LR
 - `GET /print/:id` returns the job's `id`, `state`, `attempts`, `lastError`, `cupsJobId`, `createdAt` and `updatedAt`, or 404.
 - The web app does **not** call Google Drive or CUPS. It only reads and writes SQLite.
 - Logging uses Fastify's built-in pino logger to stdout, which journald collects.
-- A systemd unit, `print-me-web.service`, is modelled on the sibling app's web unit.
+- A systemd unit, `print-me-web.service`, is modelled on screen-time's web unit.
 
 ### Worker (apps/worker)
 
@@ -147,7 +147,7 @@ flowchart LR
   - An unsupported mimeType goes straight to `failed`.
   - A failure in one job never stops the loop.
 - The worker is the only process that calls Google Drive and CUPS.
-- A systemd unit, `print-me-worker.service`, follows the sibling app's worker unit (`Restart=always`). It runs as the service user, which must be able to submit to the CUPS queue.
+- A systemd unit, `print-me-worker.service`, follows screen-time's worker unit (`Restart=always`). It runs as the service user, which must be able to submit to the CUPS queue.
 
 ### Printer Integration (CUPS + SpliX on the Pi)
 
@@ -164,17 +164,17 @@ flowchart LR
 
 **Objective**: Publish the webhook at a public hostname with edge-only authentication, fully declared in code.
 
-- OpenTofu with the `cloudflare/cloudflare` **v5** provider, laid out like the sibling app (`versions.tf`, `variables.tf`, `tunnel.tf`, `access.tf`, `outputs.tf`, `terraform.tfvars.example`, committed `.terraform.lock.hcl`). State is local, plaintext and git-ignored.
+- OpenTofu with the `cloudflare/cloudflare` **v5** provider, laid out like screen-time (`versions.tf`, `variables.tf`, `tunnel.tf`, `access.tf`, `outputs.tf`, `terraform.tfvars.example`, committed `.terraform.lock.hcl`). State is local, plaintext and git-ignored.
 - The API token comes from `CLOUDFLARE_API_TOKEN` in the shell and is never written to a file.
 - **Resources**:
   - A remotely managed Cloudflare Tunnel whose ingress maps the hostname to `http://127.0.0.1:<web port>`, plus a catch-all 404.
-  - A proxied CNAME for a single-label hostname under the zone (Universal SSL caveat, as in the sibling app).
+  - A proxied CNAME for a single-label hostname under the zone (Universal SSL caveat, as in screen-time).
   - An Access self-hosted application for the hostname.
   - An Access **service token**.
   - An Access policy that admits **only** that token (non-identity/service-auth decision). No identity provider and no email allow-list.
 - **Variables**: account ID, zone ID, hostname, and the web port.
 - **Outputs**, all marked sensitive: the tunnel token (pasted onto the Pi), and the service token's client ID and client secret (given to the agent).
-- A systemd unit, `print-me-tunnel.service`, copies the sibling app's hardened tunnel unit with a different metrics port, so it can run next to the sibling app's connector on the same Pi. Because both connectors read a token file, this tunnel's token goes in its own file under `/etc/cloudflared/`, separate from the sibling app's.
+- A systemd unit, `print-me-tunnel.service`, copies screen-time's hardened tunnel unit with a different metrics port, so it can run next to screen-time's connector on the same Pi. Because both connectors read a token file, this tunnel's token goes in its own file under `/etc/cloudflared/`, separate from screen-time's.
 
 ## Risk Considerations and Mitigation Strategies
 
@@ -184,7 +184,7 @@ flowchart LR
 - **SpliX may not actually print correctly on the SCX-4623FW**: a model-specific PPD exists (`scx4623fw.ppd`, confirmed on the Pi), but no physical print has been made yet, and SpliX is no longer actively developed.
     - **Mitigation**: the CUPS/SpliX proof print is the first execution step and gates everything else. If it fails, execution stops and the user is consulted. Options would include Samsung's driver on another host, or checking whether the printer accepts PCL/PostScript.
 - **Concurrent SQLite writers** (web inserts while the worker updates) could cause `SQLITE_BUSY`.
-    - **Mitigation**: WAL mode plus a busy timeout on the shared data source, the same as the sibling app. Write volume is tiny.
+    - **Mitigation**: WAL mode plus a busy timeout on the shared data source, the same as screen-time. Write volume is tiny.
 - **Duplicate prints**: if `lp` succeeds but the following database update fails, the job could be retried and printed twice.
     - **Mitigation**: the job is updated straight after `lp` returns. The window is accepted as negligible for this workload and recorded in AGENTS.md.
 - **Drive file not yet visible**: the agent may POST before the upload has finished or before sharing has propagated.
@@ -256,7 +256,7 @@ After all tasks are complete, run the following:
 
 This greenfield repo needs the following documentation, written as part of the plan:
 
-- **README.md** (human setup and operations, structured like the sibling app's):
+- **README.md** (human setup and operations, structured like screen-time's):
   - Architecture overview.
   - Requirements.
   - Google Cloud setup: project, enabling the Drive API, creating the service account and JSON key, sharing the print folder with the service-account email as Viewer, and where the key file goes on the Pi.
@@ -264,17 +264,17 @@ This greenfield repo needs the following documentation, written as part of the p
   - Environment variables table per app.
   - Build/run commands.
   - systemd deployment under `/opt/print-me` with a service user.
-  - Cloudflare prerequisites, `tofu apply`, installing the tunnel unit alongside the sibling app's, and handing the service-token credentials to the agent.
+  - Cloudflare prerequisites, `tofu apply`, installing the tunnel unit alongside screen-time's, and handing the service-token credentials to the agent.
   - Webhook API reference (request/response shapes for `POST /print` and `GET /print/:id`, required headers).
   - Verification steps, troubleshooting, and token rotation.
-- **AGENTS.md** (AI-facing), in the style of the sibling app's:
+- **AGENTS.md** (AI-facing), in the style of screen-time's:
   - Monorepo layout.
   - Binding invariants: the web app touches only SQLite; the worker is the only caller of Drive and CUPS; SQLite is the only shared state; authentication is edge-only, so the web app binds 127.0.0.1; the retry policy and handler registry have a single authority in the shared package.
   - The duplicate-print trade-off.
   - Locked technology decisions.
   - Things not to add.
   - Commands.
-- **CLAUDE.md** pointing at AGENTS.md, as in the sibling app.
+- **CLAUDE.md** pointing at AGENTS.md, as in screen-time.
 - **`.env.example`** for `apps/web` and `apps/worker`, and **`infra/cloudflare/terraform.tfvars.example`**, with placeholder values and a comment on each variable.
 
 ## Resource Requirements
@@ -296,13 +296,13 @@ This greenfield repo needs the following documentation, written as part of the p
 
 ### External Services and Accounts
 
-- An existing Cloudflare zone and Zero Trust organisation (shared with the sibling app) and an API token with Tunnel, Access (apps/policies and service tokens) and zone DNS edit permissions.
+- An existing Cloudflare zone and Zero Trust organisation (shared with screen-time) and an API token with Tunnel, Access (apps/policies and service tokens) and zone DNS edit permissions.
 - A Google Cloud project with the Drive API enabled and a service account.
 - A Samsung SCX-4623FW on the LAN with a DHCP reservation.
 
 ## Integration Strategy
 
-The service runs next to the sibling app on the same Pi without sharing anything at runtime: separate checkout (`/opt/print-me`), service user, SQLite file, web port, tunnel, token file, cloudflared metrics port and OpenTofu state. The two share only the Cloudflare account and zone. The AI agent integrates purely over HTTP. It needs the public hostname, the two Access service-token headers, and the Drive folder it uploads into, which must be the folder shared with the service account.
+The service runs next to screen-time on the same Pi without sharing anything at runtime: separate checkout (`/opt/print-me`), service user, SQLite file, web port, tunnel, token file, cloudflared metrics port and OpenTofu state. The two share only the Cloudflare account and zone. The AI agent integrates purely over HTTP. It needs the public hostname, the two Access service-token headers, and the Drive folder it uploads into, which must be the folder shared with the service account.
 
 ## Notes
 
