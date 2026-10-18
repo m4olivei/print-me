@@ -32,6 +32,9 @@ infra/
                   web app (tunnel + ingress, proxied DNS record, Access app, service token and
                   service-auth policy) and print-me-tunnel.service. Applied by hand; state is
                   local and git-ignored.
+  google/         OpenTofu config for the worker's Google identity: Drive and IAM APIs, the
+                  service account and its JSON key, in an existing project. Drive folder sharing
+                  is manual (Drive data, not a Google Cloud resource). Own local, git-ignored state.
 ```
 
 ## Invariants (binding)
@@ -94,6 +97,9 @@ web app.
 - Printing goes through CUPS with the SpliX driver (`drv:///splix-samsung.drv/scx4623fw.ppd`, device
   `socket://<printer-ip>:9100`); the worker calls `lp` directly. No print library.
 - Drive access is a Google service account with the read-only scope, key file outside the checkout.
+  The account and key are provisioned with **OpenTofu** in `infra/google/` (provider
+  `hashicorp/google` v8, authenticated by `gcloud` Application Default Credentials on the
+  workstation).
 - Retries: at most 5 attempts in total, backoff 1/2/4/8 minutes; permanent errors (unsupported type,
   file over `MAX_FILE_BYTES`) skip retries.
 - Dedupe on `driveFileId` while a job is `queued`/`processing`; hourly cap via `MAX_JOBS_PER_HOUR`
@@ -108,7 +114,8 @@ web app.
 - Secrets are never committed. The Cloudflare API token lives in `CLOUDFLARE_API_TOKEN`, real values
   in git-ignored `.env` and `terraform.tfvars` files (specs: the `.example` files), the tunnel token in
   `/etc/cloudflared/print-me.token`, the Google key in `/etc/print-me/`. OpenTofu state is local,
-  plaintext and git-ignored: treat it as a password file.
+  plaintext and git-ignored, and both `infra/cloudflare` and `infra/google` state hold secrets: treat
+  them as password files.
 
 ## Key semantics
 

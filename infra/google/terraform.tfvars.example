@@ -1,0 +1,7 @@
+# Copy to terraform.tfvars and fill in real values (the .tfvars itself is
+# git-ignored). No credentials go here; authenticate first with:
+#
+#   gcloud auth application-default login
+
+# An existing project, e.g. from `gcloud projects create <project-id>`.
+project_id = "<project-id>"

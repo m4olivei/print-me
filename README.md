@@ -51,9 +51,15 @@ the webhook.
   pnpm 11 (the repo pins `pnpm@11.20.0` via `packageManager`).
 - A Samsung SCX-4623FW with a DHCP reservation (see below).
 - CUPS, `cups-filters` and the SpliX driver on the Pi.
-- A Google Cloud project with the Drive API enabled.
+- A Google Cloud project, and the [Google Cloud CLI](https://cloud.google.com/sdk/docs/install)
+  (`gcloud`) on a workstation.
 - A Cloudflare account with a zone and a Zero Trust organization, and [OpenTofu](https://opentofu.org)
   on a workstation.
+
+The Google Cloud and Cloudflare resources are declared in `infra/google/` and `infra/cloudflare/`
+and applied with OpenTofu from a clone of this repo on your workstation, never from the Pi. Each
+directory has its own local, git-ignored state that holds secrets, so keep the workstation clone
+safe.
 
 The repo is public: it holds only placeholders (`print.example.com`, `<printer-ip>`,
 `<account-id>`, `<zone-id>`). Real values live in git-ignored `.env` and `terraform.tfvars` files.
@@ -61,24 +67,57 @@ The repo is public: it holds only placeholders (`print.example.com`, `<printer-i
 ## Google Cloud setup
 
 The worker authenticates to Drive as a **service account** with the read-only scope, so it can see
-only files explicitly shared with it.
+only files explicitly shared with it. OpenTofu in `infra/google/` enables the Drive and IAM APIs,
+creates the service account (no project roles) and creates its JSON key. The project itself and
+the Drive folder sharing are not managed by OpenTofu.
 
-1. In the [Google Cloud console](https://console.cloud.google.com/), create (or pick) a project.
-2. Enable the **Google Drive API** for it (APIs & Services → Library).
-3. Create a service account (IAM & Admin → Service Accounts). No project roles are needed.
-4. On the service account, Keys → Add key → Create new key → **JSON**. Download it.
-5. In Google Drive, create the **print folder** and share it with the service account's email
-   address (`<name>@<project>.iam.gserviceaccount.com`) as **Viewer**. The agent must save its PDFs
-   into this folder.
-6. Put the key on the Pi **outside the checkout**, readable only by the service user (the service
-   user is created in [Deploying](#deploying-on-the-raspberry-pi-systemd)):
+1. On the workstation, sign in and create the project, or reuse an existing one:
 
    ```sh
+   gcloud auth login
+   gcloud auth application-default login    # the credentials OpenTofu uses
+   gcloud projects create <project-id>      # skip if reusing a project
+   ```
+
+2. Apply:
+
+   ```sh
+   cd infra/google
+   cp terraform.tfvars.example terraform.tfvars   # git-ignored; set project_id
+   tofu init
+   tofu apply
+   tofu output service_account_email               # for step 3
+   tofu output -raw service_account_key | base64 -d > service-account.json
+   ```
+
+   The key's private part is stored in the local state, so treat `terraform.tfstate` as a password
+   file. If key creation is refused with an organization-policy error
+   (`iam.disableServiceAccountKeyCreation`, the default for Google Cloud organizations created since
+   2024), the project belongs to an organization that blocks keys. A personal account with no
+   organization is not affected.
+
+3. In Google Drive, create the **print folder** and share it with the `service_account_email` address
+   as **Viewer**. The agent must save its PDFs into this folder. Drive permissions are Drive data, not
+   Google Cloud resources, so OpenTofu cannot do this step.
+4. Copy `service-account.json` to the Pi and install it **outside the checkout**, readable only by the
+   service user (the service user is created in
+   [Deploying](#deploying-on-the-raspberry-pi-systemd)). Then delete both copies of the downloaded
+   file: the state is now the only source of the key.
+
+   ```sh
+   # on the workstation
+   scp service-account.json <pi-host>: && rm service-account.json
+   # on the Pi
    sudo install -d -o root -g print-me -m 0750 /etc/print-me
-   sudo install -o print-me -g print-me -m 0600 /path/to/downloaded-key.json /etc/print-me/service-account.json
+   sudo install -o print-me -g print-me -m 0600 ~/service-account.json /etc/print-me/service-account.json
+   rm ~/service-account.json
    ```
 
    `GOOGLE_APPLICATION_CREDENTIALS` in `apps/worker/.env` points at this path. Never commit the key.
+
+To rotate the key, run `tofu apply -replace=google_service_account_key.worker`, repeat step 4 and
+`sudo systemctl restart print-me-worker`. The old key is deleted during the apply, so Drive calls
+fail, and jobs retry, until the new key is installed.
 
 ## Printer setup (CUPS + SpliX)
 
@@ -431,9 +470,10 @@ once the apply finishes.
 # On the Pi: stop the connector, let connections drain
 sudo systemctl disable --now print-me-tunnel && sleep 15
 
-# On the workstation: tear down the Cloudflare side
+# On the workstation: tear down the Cloudflare side, then the Google service account and key
 tofu -chdir=infra/cloudflare destroy
+tofu -chdir=infra/google destroy
 ```
 
-`tofu destroy` does not remove the Google Cloud service account or its key (delete them in the
-Google console), the Zero Trust organization, or the local state files.
+`tofu destroy` does not remove the Google Cloud project, the enabled APIs, the Drive folder sharing,
+the Zero Trust organization, or the local state files.
