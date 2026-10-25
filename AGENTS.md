@@ -8,8 +8,8 @@ technology decisions that were deliberately locked during planning — do not re
 A print webhook: an AI agent saves a PDF to a shared Google Drive folder and POSTs its link to
 `apps/web` (Fastify), which queues a job in SQLite. A systemd-managed poll worker (`apps/worker`)
 on a Raspberry Pi downloads the file from Drive as a service account and submits it to a local CUPS
-queue (SpliX driver) for a Samsung SCX-4623FW. Cloudflare Tunnel + Access publishes the webhook. See
-`README.md` for setup and operations.
+queue (driverless IPP Everywhere) for a Brother MFC-L3720CDW. Cloudflare Tunnel + Access publishes
+the webhook. See `README.md` for setup and operations.
 
 ## Monorepo layout
 
@@ -94,8 +94,9 @@ web app.
   via `synchronize: true` (greenfield), WAL mode plus a 5 s busy timeout.
 - Single pnpm workspace (`pnpm-workspace.yaml`: `packages/*`, `apps/*`), pnpm pinned in
   `packageManager`.
-- Printing goes through CUPS with the SpliX driver (`drv:///splix-samsung.drv/scx4623fw.ppd`, device
-  `socket://<printer-ip>:9100`); the worker calls `lp` directly. No print library.
+- Printing goes through CUPS with a driverless IPP Everywhere queue (`lpadmin -m everywhere`, device
+  `ipp://<printer-ip>/ipp/print`); no vendor driver. The worker calls `lp` directly. No print library.
+  Color and duplex are queue defaults set with `lpadmin`, never options sent by the worker.
 - Drive access is a Google service account with the read-only scope, key file outside the checkout.
   The account and key are provisioned with **OpenTofu** in `infra/google/` (provider
   `hashicorp/google` v8, authenticated by `gcloud` Application Default Credentials on the
@@ -123,7 +124,7 @@ web app.
   `processing` by a crash returns to `queued` (safe because there is exactly one worker).
 - A tick handles at most one job: the oldest `queued` job whose `nextAttemptAt` has passed, claimed
   by moving it to `processing` before any work.
-- `cupsJobId` is stored in full `<queue>-<n>` form (e.g. `scx4623fw-3`), parsed from
+- `cupsJobId` is stored in full `<queue>-<n>` form (e.g. `mfcl3720cdw-3`), parsed from
   `request id is <queue>-<n> (1 file(s))`. The parser must not anchor on end of line; unparseable
   output fails the attempt.
 - `GET /print/:id` with a non-numeric id returns 400 (route schema); an unknown id returns 404.

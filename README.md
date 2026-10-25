@@ -2,7 +2,7 @@
 
 A self-hosted print webhook. An AI agent saves a PDF to a shared Google Drive folder and POSTs its
 link to a public webhook; a worker on a Raspberry Pi downloads the file and prints it on a LAN
-Samsung SCX-4623FW through CUPS.
+Brother MFC-L3720CDW through CUPS.
 
 ## Architecture
 
@@ -23,7 +23,7 @@ agent --(Access service token)--> Cloudflare edge --> cloudflared --> web (127.0
                                                                         |
                                                                      SQLite
                                                                         |
-Drive <-- worker --lp--> CUPS + SpliX --socket (LAN)--> Samsung SCX-4623FW
+Drive <-- worker --lp--> CUPS (driverless) --IPP (LAN)--> Brother MFC-L3720CDW
 ```
 
 Cloudflare Access is the only authentication layer. The app has none of its own, which is why the
@@ -35,7 +35,7 @@ the webhook.
 
 - A job is `queued`, `processing`, `printed` or `failed`.
 - **`printed` means CUPS accepted the job** (`lp` returned a job ID, stored as `cupsJobId`, e.g.
-  `scx4623fw-3`). It does not mean paper came out: CUPS accepts jobs even when the printer address
+  `mfcl3720cdw-3`). It does not mean paper came out: CUPS accepts jobs even when the printer address
   is wrong. Problems after that point show up in CUPS (`lpstat`), not in the job row.
 - A job gets **at most 5 attempts** in total (fetch and print together are one attempt), retried
   after 1, 2, 4 and 8 minutes, then marked `failed`. A job that keeps failing therefore reads
@@ -49,8 +49,8 @@ the webhook.
 
 - A Raspberry Pi (arm64 Debian) on the same LAN as the printer, with systemd, Node.js 24 LTS and
   pnpm 11 (the repo pins `pnpm@11.20.0` via `packageManager`).
-- A Samsung SCX-4623FW with a DHCP reservation (see below).
-- CUPS, `cups-filters` and the SpliX driver on the Pi.
+- A Brother MFC-L3720CDW (or another IPP Everywhere printer) with a DHCP reservation (see below).
+- CUPS and `cups-filters` on the Pi. No vendor driver is needed.
 - A Google Cloud project, and the [Google Cloud CLI](https://cloud.google.com/sdk/docs/install)
   (`gcloud`) on a workstation.
 - A Cloudflare account with a zone and a Zero Trust organization, and [OpenTofu](https://opentofu.org)
@@ -119,56 +119,73 @@ To rotate the key, run `tofu apply -replace=google_service_account_key.worker`, 
 `sudo systemctl restart print-me-worker`. The old key is deleted during the apply, so Drive calls
 fail, and jobs retry, until the new key is installed.
 
-## Printer setup (CUPS + SpliX)
+## Printer setup (CUPS, driverless IPP Everywhere)
 
-The SCX-4623FW most likely speaks only Samsung's SPL language, so PDFs are converted by CUPS with
-the open-source SpliX driver. The worker just runs `lp`. This setup was proven end to end on the
-target Pi (a CUPS test page physically printed).
+The MFC-L3720CDW supports IPP Everywhere (AirPrint), so CUPS drives it with no vendor driver:
+`lpadmin -m everywhere` asks the printer what it supports and generates the queue's PPD, and CUPS
+converts each PDF to a format the printer accepts. The worker just runs `lp`. This setup was proven
+end to end on the target Pi (a test PDF physically printed).
 
 1. Install the packages. `--no-install-recommends` keeps out `cups-browsed`, which is not needed and
    had a serious vulnerability in 2024. CUPS stays loopback-only.
 
    ```sh
-   sudo apt-get install --no-install-recommends cups cups-client cups-filters printer-driver-splix
+   sudo apt-get install --no-install-recommends cups cups-client cups-filters
    ```
 
 2. **Reserve a DHCP address for the printer** in your router, and use that address below. CUPS
    reports success for a queue pointing at the wrong address (`lp` still returns job IDs and nothing
-   prints), so a drifting address fails silently.
+   prints), so a drifting address fails silently. IPP is on by default (the printer's web UI,
+   Network > Protocol); check the Pi can reach it with `nc -zv <printer-ip> 631`.
 3. Set `CUPS_PRINTER_NAME` and `PRINTER_DEVICE_URI` in `apps/worker/.env` (see
-   [Environment variables](#environment-variables)), then create the queue from those values. The
-   proven device URI scheme is a raw socket on port 9100, and the proven PPD is the model-specific
-   `scx4623fw.ppd` (`lpinfo -m` also lists `scx4623f.ppd`; use the `fw` one):
+   [Environment variables](#environment-variables)) with `sudoedit -u print-me`, then create the
+   queue from those values as your own user. The device URI is IPP on the standard path
+   `/ipp/print`. The printer must be on and reachable while `lpadmin` runs, because
+   `-m everywhere` queries it:
 
    ```sh
-   # in apps/worker: load the values from .env
-   set -a && . ./.env && set +a
-   sudo lpadmin -p "$CUPS_PRINTER_NAME" -E -v "$PRINTER_DEVICE_URI" -m drv:///splix-samsung.drv/scx4623fw.ppd
+   # load the values from .env into your shell (use `. <(sudo cat ...)` if it isn't readable)
+   set -a && . /opt/print-me/apps/worker/.env && set +a
+   sudo lpadmin -p "$CUPS_PRINTER_NAME" -E -v "$PRINTER_DEVICE_URI" -m everywhere
    sudo cupsenable "$CUPS_PRINTER_NAME" && sudo cupsaccept "$CUPS_PRINTER_NAME"
    ```
 
-   With the example values this is `lpadmin -p scx4623fw -E -v socket://<printer-ip>:9100 -m
-drv:///splix-samsung.drv/scx4623fw.ppd`. `lpadmin` prints `Printer drivers are deprecated and
-will stop working in a future version of CUPS`. That is harmless today; see Troubleshooting.
+   With the example values this is `lpadmin -p mfcl3720cdw -E -v ipp://<printer-ip>/ipp/print -m
+everywhere`. `-E` after `-p` enables the queue (before `-p` it means encryption).
 
-4. Check the queue and the address CUPS will actually use, then print a test page:
+4. **Queue defaults.** The worker sends no print options, so the queue's defaults decide every
+   job. The generated PPD defaults to color (`ColorModel` `RGB`) and one-sided (`Duplex` `None`):
 
    ```sh
-   lpstat -p scx4623fw            # printer scx4623fw is idle.  enabled since ...
-   lpstat -v scx4623fw            # device for scx4623fw: socket://<printer-ip>:9100
-   lp -d scx4623fw /usr/share/cups/data/testprint
+   lpoptions -p mfcl3720cdw -l | grep -iE 'color|duplex'
+   # ColorModel/Output Mode: *RGB Gray
+   # Duplex/Duplex: *None DuplexNoTumble DuplexTumble
    ```
 
-   To change the address of an existing queue: `sudo lpadmin -p scx4623fw -v
-socket://<printer-ip>:9100`, then re-check with `lpstat -v`.
+   To print black and white by default, run `sudo lpadmin -p mfcl3720cdw -o ColorModel=Gray`.
 
-5. **Service-user permissions.** The worker runs as the loginless `print-me` user and must be able
+5. Check the queue and the address CUPS will actually use, then print a test page:
+
+   ```sh
+   lpstat -p mfcl3720cdw          # printer mfcl3720cdw is idle.  enabled since ...
+   lpstat -v mfcl3720cdw          # device for mfcl3720cdw: ipp://<printer-ip>/ipp/print
+   lp -d mfcl3720cdw /usr/share/cups/data/testprint
+   ```
+
+   To change the address of an existing queue: `sudo lpadmin -p mfcl3720cdw -v
+ipp://<printer-ip>/ipp/print`, then re-check with `lpstat -v`.
+
+6. **Service-user permissions.** The worker runs as the loginless `print-me` user and must be able
    to submit to the queue. This is checked at deployment (see
-   [Verification](#verification)): `sudo -u print-me lp -d scx4623fw sample.pdf`. CUPS's default
-   policy lets any local user submit jobs, so no group membership is expected. If CUPS refuses,
-   check the queue's user allow list (`lpoptions -p scx4623fw | tr ' ' '\n' | grep requesting-user`)
-   and allow the service user with `sudo lpadmin -p scx4623fw -u allow:print-me`. Do not add
-   `print-me` to the `lpadmin` group: that grants CUPS admin rights the worker doesn't need.
+   [Verification](#verification)): `sudo -u print-me lp -d mfcl3720cdw -- /tmp/sample.pdf`. Put
+   the test file somewhere `print-me` can read, such as `/tmp`: a file in your home directory fails
+   with `unable to access ... Permission denied`, which is `lp` failing to read it, not CUPS
+   refusing the job. CUPS's default policy lets any local user submit jobs, so no group membership
+   is expected. If CUPS itself refuses, check the queue's user allow list
+   (`lpoptions -p mfcl3720cdw | tr ' ' '\n' | grep requesting-user`). An allow list admits only the
+   users on it, so add the service user alongside anyone else who prints:
+   `sudo lpadmin -p mfcl3720cdw -u allow:print-me,<your-user>` (`-u allow:all` removes the list). Do
+   not add `print-me` to the `lpadmin` group: that grants CUPS admin rights the worker doesn't need.
 
 ## Setup
 
@@ -188,14 +205,14 @@ environment (for example from systemd's `EnvironmentFile=`) win.
 
 **`apps/worker/.env`**
 
-| Variable                         | Required | Default    | Meaning                                                                                                                |
-| -------------------------------- | -------- | ---------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `DB_PATH`                        | yes      | none       | Same SQLite file as the web app.                                                                                       |
-| `GOOGLE_APPLICATION_CREDENTIALS` | yes      | none       | Path to the service account's JSON key, outside the checkout (`/etc/print-me/service-account.json`).                   |
-| `CUPS_PRINTER_NAME`              | yes      | none       | CUPS queue the worker prints to with `lp -d` (`scx4623fw`).                                                            |
-| `PRINTER_DEVICE_URI`             | no       | none       | The printer's address, e.g. `socket://<printer-ip>:9100`. **Not read by the worker**: only the `lpadmin` step uses it. |
-| `POLL_INTERVAL_MS`               | no       | `10000`    | Milliseconds between ticks; each tick handles at most one job.                                                         |
-| `MAX_FILE_BYTES`                 | no       | `52428800` | Largest Drive file accepted (50 MB), checked from Drive metadata before downloading. Larger files fail permanently.    |
+| Variable                         | Required | Default    | Meaning                                                                                                                  |
+| -------------------------------- | -------- | ---------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `DB_PATH`                        | yes      | none       | Same SQLite file as the web app.                                                                                         |
+| `GOOGLE_APPLICATION_CREDENTIALS` | yes      | none       | Path to the service account's JSON key, outside the checkout (`/etc/print-me/service-account.json`).                     |
+| `CUPS_PRINTER_NAME`              | yes      | none       | CUPS queue the worker prints to with `lp -d` (`mfcl3720cdw`).                                                            |
+| `PRINTER_DEVICE_URI`             | no       | none       | The printer's address, e.g. `ipp://<printer-ip>/ipp/print`. **Not read by the worker**: only the `lpadmin` step uses it. |
+| `POLL_INTERVAL_MS`               | no       | `10000`    | Milliseconds between ticks; each tick handles at most one job.                                                           |
+| `MAX_FILE_BYTES`                 | no       | `52428800` | Largest Drive file accepted (50 MB), checked from Drive metadata before downloading. Larger files fail permanently.      |
 
 Numeric values must be positive integers or the app refuses to start.
 
@@ -374,7 +391,7 @@ curl -sS -X POST https://print.example.com/print \
 curl -sS https://print.example.com/print/42 \
   -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
   -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET"
-# {"id":42,"state":"printed","attempts":1,"lastError":null,"cupsJobId":"scx4623fw-3",
+# {"id":42,"state":"printed","attempts":1,"lastError":null,"cupsJobId":"mfcl3720cdw-3",
 #  "createdAt":"...","updatedAt":"..."}
 
 # Health
@@ -402,10 +419,10 @@ It then saves a PDF into that folder and calls `POST /print` with the file's lin
 On the Pi:
 
 ```sh
-lpstat -p scx4623fw                                  # queue enabled
-lpstat -v scx4623fw                                  # device URI is the reserved printer address
-sudo -u print-me lp -d scx4623fw sample.pdf          # the service user can print
-sudo -u print-me lp -d scx4623fw -- sample.pdf       # ...and the worker's `--` form works too
+lpstat -p mfcl3720cdw                                  # queue enabled
+lpstat -v mfcl3720cdw                                  # device URI is the reserved printer address
+sudo -u print-me lp -d mfcl3720cdw /tmp/sample.pdf     # the service user can print
+sudo -u print-me lp -d mfcl3720cdw -- /tmp/sample.pdf  # ...and the worker's `--` form works too
 systemctl status print-me-web print-me-worker print-me-tunnel
 curl -s http://127.0.0.1:3100/healthz                # {"ok":true}
 curl -s http://127.0.0.1:20242/ready                 # readyConnections > 0
@@ -431,21 +448,21 @@ out of the printer. `GET /healthz` with headers is 200 and without them is 401.
 
 ## Troubleshooting
 
-| Symptom                                                             | Cause and fix                                                                                                                                                                                    |
-| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **401** from the public hostname                                    | Missing or wrong `CF-Access-Client-Id` / `CF-Access-Client-Secret` headers, or the service token expired (see rotation).                                                                         |
-| Cloudflare **error 1033**                                           | The connector is down: `systemctl status print-me-tunnel`.                                                                                                                                       |
-| **502**                                                             | Tunnel is up, the app is not: `systemctl status print-me-web`. Also check `PORT` equals `web_port`.                                                                                              |
-| `429` on `POST /print`                                              | Hourly cap reached; wait `Retry-After` seconds or raise `MAX_JOBS_PER_HOUR`.                                                                                                                     |
-| Job `failed` with a Drive 404 or permission error in `lastError`    | The file is not in the folder shared with the service account (Viewer), or its sharing has not propagated yet. The 5-attempt backoff covers brief delays.                                        |
-| Job `failed`: unsupported document type                             | Only PDFs print. The agent must save a real PDF, not a Google Doc.                                                                                                                               |
-| Job `failed`: over `MAX_FILE_BYTES`                                 | The file is bigger than the cap; raise `MAX_FILE_BYTES` in `apps/worker/.env` and restart the worker.                                                                                            |
-| Job `printed` but nothing comes out                                 | CUPS accepted it but the printer did not. Check `lpstat -o scx4623fw` and `lpstat -v scx4623fw`: a wrong or drifted device address still "succeeds". Fix the address and use a DHCP reservation. |
-| Stuck jobs in the CUPS queue                                        | `lpstat -o scx4623fw`, then `cancel -a scx4623fw` (add `sudo` if it says "not authorized").                                                                                                      |
-| `lp` refused for the service user                                   | See the service-user permissions note in Printer setup (`lpadmin` group).                                                                                                                        |
-| `lpadmin`: "Printer drivers are deprecated..."                      | Harmless today. A future CUPS upgrade may stop `drv:///` driver PPDs from working; if printing breaks after an upgrade, re-check the queue and driver first.                                     |
-| Web or worker exits at start with "Refusing to start: unique index" | The partial unique index could not be created in `DB_PATH`; check the file's permissions and that both apps use the same, writable path.                                                         |
-| Repeated `Failed to create new quic connection` in the tunnel log   | The router blocks outbound UDP/7844: add `--protocol http2` to the tunnel unit's `ExecStart`, never a port forward.                                                                              |
+| Symptom                                                             | Cause and fix                                                                                                                                                                                        |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **401** from the public hostname                                    | Missing or wrong `CF-Access-Client-Id` / `CF-Access-Client-Secret` headers, or the service token expired (see rotation).                                                                             |
+| Cloudflare **error 1033**                                           | The connector is down: `systemctl status print-me-tunnel`.                                                                                                                                           |
+| **502**                                                             | Tunnel is up, the app is not: `systemctl status print-me-web`. Also check `PORT` equals `web_port`.                                                                                                  |
+| `429` on `POST /print`                                              | Hourly cap reached; wait `Retry-After` seconds or raise `MAX_JOBS_PER_HOUR`.                                                                                                                         |
+| Job `failed` with a Drive 404 or permission error in `lastError`    | The file is not in the folder shared with the service account (Viewer), or its sharing has not propagated yet. The 5-attempt backoff covers brief delays.                                            |
+| Job `failed`: unsupported document type                             | Only PDFs print. The agent must save a real PDF, not a Google Doc.                                                                                                                                   |
+| Job `failed`: over `MAX_FILE_BYTES`                                 | The file is bigger than the cap; raise `MAX_FILE_BYTES` in `apps/worker/.env` and restart the worker.                                                                                                |
+| Job `printed` but nothing comes out                                 | CUPS accepted it but the printer did not. Check `lpstat -o mfcl3720cdw` and `lpstat -v mfcl3720cdw`: a wrong or drifted device address still "succeeds". Fix the address and use a DHCP reservation. |
+| Stuck jobs in the CUPS queue                                        | `lpstat -o mfcl3720cdw`, then `cancel -a mfcl3720cdw` (add `sudo` if it says "not authorized").                                                                                                      |
+| `lp` refused for the service user                                   | `unable to access ... Permission denied` means `print-me` can't read the file: use `/tmp`. Otherwise see the service-user permissions note in Printer setup.                                         |
+| `lpadmin`: "Unable to get printer attributes"                       | `-m everywhere` couldn't query the printer. Check it's on, the address is right and `nc -zv <printer-ip> 631` connects, then re-run `lpadmin`.                                                       |
+| Web or worker exits at start with "Refusing to start: unique index" | The partial unique index could not be created in `DB_PATH`; check the file's permissions and that both apps use the same, writable path.                                                             |
+| Repeated `Failed to create new quic connection` in the tunnel log   | The router blocks outbound UDP/7844: add `--protocol http2` to the tunnel unit's `ExecStart`, never a port forward.                                                                                  |
 
 ### Rotating the Access service token
 
