@@ -414,6 +414,9 @@ The agent needs three things:
 It then saves a PDF into that folder and calls `POST /print` with the file's link, and polls
 `GET /print/:id` if it wants the outcome.
 
+`AGENT_README.example.md` is a ready-made prompt covering all of this. Copy it to `AGENT_README.md`
+(git-ignored), fill in the hostname and folder ID, and hand the copy to the agent.
+
 ## Verification
 
 On the Pi:

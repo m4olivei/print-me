@@ -7,6 +7,9 @@ apm_modules/
 .env.*
 !.env.example
 
+# Prompt handed to the print agent: holds the real hostname and Drive folder ID
+/AGENT_README.md
+
 # Google service-account key, in case it is placed inside the checkout
 # (the documented location is outside it)
 *service-account*.json
