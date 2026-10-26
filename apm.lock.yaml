@@ -1,5 +1,5 @@
 lockfile_version: '1'
-apm_version: 0.33.0
+apm_version: 0.35.0
 dependencies:
 - repo_url: e0ipso/strikethroo
   name: strikethroo
@@ -7,7 +7,7 @@ dependencies:
   resolved_commit: 32205cafc5d58741b2751b78f56d88c1df174219
   resolved_ref: v4.2.0
   version: 32205ca
-  package_type: marketplace_plugin
+  package_type: skill_bundle
   deployed_files:
   - .claude/skills/st-code-review
   - .claude/skills/st-code-review/SKILL.md
