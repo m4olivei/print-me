@@ -9,7 +9,7 @@ author: Matthew Oliveira
 
 dependencies:
   apm:
-    - e0ipso/strikethroo#v4.2.0
+    - e0ipso/strikethroo#v4.6.0
   mcp: []
 includes: auto
 scripts: {}
